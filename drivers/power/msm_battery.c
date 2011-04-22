@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -799,6 +799,7 @@ void msm_batt_late_resume(struct early_suspend *h)
 		return;
 	}
 
+	msm_batt_update_psy_status();
 	pr_debug("%s: exit\n", __func__);
 }
 #endif
