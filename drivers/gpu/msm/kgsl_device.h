@@ -176,6 +176,7 @@ struct kgsl_device {
 	struct kobject pwrscale_kobj;
 	struct work_struct ts_expired_ws;
 	struct list_head events;
+	s64 on_time;
 };
 
 struct kgsl_context {
