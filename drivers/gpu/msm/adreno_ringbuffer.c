@@ -391,7 +391,6 @@ void adreno_ringbuffer_stop(struct adreno_ringbuffer *rb)
 	if (rb->flags & KGSL_FLAGS_STARTED) {
 		/* ME_HALT */
 		adreno_regwrite(rb->device, REG_CP_ME_CNTL, 0x10000000);
-
 		rb->flags &= ~KGSL_FLAGS_STARTED;
 	}
 }
