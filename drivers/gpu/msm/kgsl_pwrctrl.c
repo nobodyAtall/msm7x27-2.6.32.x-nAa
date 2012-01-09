@@ -844,6 +844,16 @@ void kgsl_pwrctrl_disable(struct kgsl_device *device)
 }
 EXPORT_SYMBOL(kgsl_pwrctrl_disable);
 
+void kgsl_pwrctrl_stop_work(struct kgsl_device *device)
+{
+	del_timer_sync(&device->idle_timer);
+	kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_OFF);
+	mutex_unlock(&device->mutex);
+	flush_workqueue(device->work_queue);
+	mutex_lock(&device->mutex);
+}
+EXPORT_SYMBOL(kgsl_pwrctrl_stop_work);
+
 void kgsl_pwrctrl_set_state(struct kgsl_device *device, unsigned int state)
 {
 	KGSL_PWR_WARN(device, "%x\n", state);
