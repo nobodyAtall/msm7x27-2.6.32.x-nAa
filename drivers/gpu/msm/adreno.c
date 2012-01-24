@@ -135,6 +135,8 @@ static const struct {
 	const char *pm4fw;
 	const char *pfpfw;
 	struct adreno_gpudev *gpudev;
+	unsigned int istore_size;
+	unsigned int pix_shader_start;
 } adreno_gpulist[] = {
 	{ ADRENO_REV_A200, 0, 2, ANY_ID, ANY_ID,
 		"yamato_pm4.fw", "yamato_pfp.fw", &adreno_a2xx_gpudev },
