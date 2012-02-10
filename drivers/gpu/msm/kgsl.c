@@ -239,6 +239,27 @@ kgsl_destroy_context(struct kgsl_device_private *dev_priv,
 	idr_remove(&dev_priv->device->context_idr, id);
 }
 
+/* to be called when a process is destroyed, this walks the memqueue and
+ * frees any entryies that belong to the dying process
+ */
+static void kgsl_memqueue_cleanup(struct kgsl_device *device,
+				     struct kgsl_process_private *private)
+{
+	struct kgsl_mem_entry *entry, *entry_tmp;
+
+	if (!private)
+		return;
+
+	BUG_ON(!mutex_is_locked(&device->mutex));
+
+	list_for_each_entry_safe(entry, entry_tmp, &device->memqueue, list) {
+		if (entry->priv == private) {
+			list_del(&entry->list);
+			kgsl_mem_entry_put(entry);
+		}
+	}
+}
+
 static void kgsl_timestamp_expired(struct work_struct *work)
 {
 	struct kgsl_device *device = container_of(work, struct kgsl_device,
@@ -634,6 +655,7 @@ static int kgsl_release(struct inode *inodep, struct file *filep)
 	/* clean up any to-be-freed entries that belong to this
 	 * process and this device
 	 */
+	kgsl_memqueue_cleanup(device, private);
 	kgsl_cancel_events(device, dev_priv);
 
 	mutex_unlock(&device->mutex);
