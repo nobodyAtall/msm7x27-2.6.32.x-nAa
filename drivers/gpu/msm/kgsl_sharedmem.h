@@ -17,6 +17,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/vmalloc.h>
 #include "kgsl_mmu.h"
+#include <linux/slab.h>
+#include <linux/kmemleak.h>
 
 /*
  * Convert a page to a physical address
@@ -90,6 +92,8 @@ memdesc_sg_phys(struct kgsl_memdesc *memdesc,
 	memdesc->sg = vmalloc(sizeof(struct scatterlist) * 1);
 	if (memdesc->sg == NULL)
 		return -ENOMEM;
+
+	kmemleak_not_leak(memdesc->sg);
 
 	memdesc->sglen = 1;
 	sg_init_table(memdesc->sg, 1);
