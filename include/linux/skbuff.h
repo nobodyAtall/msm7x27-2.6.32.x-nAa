@@ -374,8 +374,8 @@ struct sk_buff {
 #endif
 #endif
 
+	__u16			queue_mapping;
 	kmemcheck_bitfield_begin(flags2);
-	__u16			queue_mapping:16;
 #ifdef CONFIG_IPV6_NDISC_NODETYPE
 	__u8			ndisc_nodetype:2;
 #endif
