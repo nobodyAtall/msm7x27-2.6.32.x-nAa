@@ -175,8 +175,6 @@ static int restore_iwmmxt_context(struct iwmmxt_sigframe *frame)
 
 #endif
 
-	vfp_flush_hwstate(thread);
-
 /*
  * Do a signal return; undo the signal stack.  These are aligned to 64-bit.
  */
