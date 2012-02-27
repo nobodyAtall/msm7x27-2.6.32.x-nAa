@@ -327,9 +327,11 @@ load_b:
 				return 0;
 			A = skb->dev->type;
 			continue;
+#if 0
 		case SKF_AD_RXHASH:
 			A = skb->rxhash;
 			continue;
+#endif
 		case SKF_AD_CPU:
 			A = raw_smp_processor_id();
 			continue;

@@ -797,12 +797,14 @@ b_epilogue:
 			off = offsetof(struct sk_buff, mark);
 			emit(ARM_LDR_I(r_A, r_skb, off), ctx);
 			break;
+#if 0
 		case BPF_S_ANC_RXHASH:
 			ctx->seen |= SEEN_SKB;
 			BUILD_BUG_ON(FIELD_SIZEOF(struct sk_buff, rxhash) != 4);
 			off = offsetof(struct sk_buff, rxhash);
 			emit(ARM_LDR_I(r_A, r_skb, off), ctx);
 			break;
+#endif
 		case BPF_S_ANC_QUEUE:
 			ctx->seen |= SEEN_SKB;
 			BUILD_BUG_ON(FIELD_SIZEOF(struct sk_buff,
