@@ -587,6 +587,9 @@ EXPORT_SYMBOL(idr_for_each);
  *
  * Returns pointer to registered object with id, which is next number to
  * given id.
+ *
+ * This function can be called under rcu_read_lock(), given that the leaf
+ * pointers lifetimes are correctly managed.
  */
 
 void *idr_get_next(struct idr *idp, int *nextidp)
@@ -597,10 +600,10 @@ void *idr_get_next(struct idr *idp, int *nextidp)
 	int n, max;
 
 	/* find first ent */
-	n = idp->layers * IDR_BITS;
-	max = 1 << n;
 	p = rcu_dereference(idp->top);
 	if (!p)
+	n = (p->layer + 1) * IDR_BITS;	
+	max = 1 << n;
 		return NULL;
 
 	while (id < max) {
