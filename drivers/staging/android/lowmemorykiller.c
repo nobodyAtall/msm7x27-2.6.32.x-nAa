@@ -34,6 +34,7 @@
 #include <linux/mm.h>
 #include <linux/oom.h>
 #include <linux/sched.h>
+#include <linux/rcupdate.h>
 #include <linux/notifier.h>
 
 static uint32_t lowmem_debug_level = 2;
@@ -131,7 +132,7 @@ static int lowmem_shrink(int nr_to_scan, gfp_t gfp_mask)
 	}
 	selected_oom_adj = min_adj;
 
-	read_lock(&tasklist_lock);
+	rcu_read_lock();
 	for_each_process(p) {
 		struct mm_struct *mm;
 		struct signal_struct *sig;
@@ -170,7 +171,7 @@ static int lowmem_shrink(int nr_to_scan, gfp_t gfp_mask)
 		if (fatal_signal_pending(selected)) {
 			pr_warning("process %d is suffering a slow death\n",
 			     selected->pid);
-			read_unlock(&tasklist_lock);
+			rcu_read_unlock();
 			return rem;	
 		   }
 		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d\n",
@@ -178,12 +179,12 @@ static int lowmem_shrink(int nr_to_scan, gfp_t gfp_mask)
 			     selected_oom_adj, selected_tasksize);
 		lowmem_deathpending = selected;
 		lowmem_deathpending_timeout = jiffies + HZ;
-		force_sig(SIGKILL, selected);
+		send_sig(SIGKILL, selected, 0);
 		rem -= selected_tasksize;
 	}
 	lowmem_print(4, "lowmem_shrink %d, %x, return %d\n",
 		     nr_to_scan, gfp_mask, rem);
-	read_unlock(&tasklist_lock);
+	rcu_read_unlock();
 	return rem;
 }
 
