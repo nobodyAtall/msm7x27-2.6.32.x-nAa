@@ -316,9 +316,8 @@ static void unfreeze_cgroup(struct cgroup *cgroup, struct freezer *freezer)
 	struct task_struct *task;
 
 	cgroup_iter_start(cgroup, &it);
-	while ((task = cgroup_iter_next(cgroup, &it))) {
-		thaw_process(task);
-	}
+	while ((task = cgroup_iter_next(cgroup, &it)))
+		__thaw_task(task);
 	cgroup_iter_end(cgroup, &it);
 
 	freezer->state = CGROUP_THAWED;
