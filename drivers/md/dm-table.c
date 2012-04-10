@@ -1089,6 +1089,31 @@ no_integrity:
 	return;
 }
 
+static int device_is_nonrot(struct dm_target *ti, struct dm_dev *dev,
+			    sector_t start, sector_t len, void *data)
+{
+	struct request_queue *q = bdev_get_queue(dev->bdev);
+
+	return q && blk_queue_nonrot(q);
+}
+
+static bool dm_table_is_nonrot(struct dm_table *t)
+{
+	struct dm_target *ti;
+	unsigned i = 0;
+
+	/* Ensure that all underlying device are non-rotational. */
+	while (i < dm_table_get_num_targets(t)) {
+		ti = dm_table_get_target(t, i++);
+
+		if (!ti->type->iterate_devices ||
+		    !ti->type->iterate_devices(ti, device_is_nonrot, NULL))
+			return 0;
+	}
+
+	return 1;
+}
+
 void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 			       struct queue_limits *limits)
 {
@@ -1096,6 +1121,11 @@ void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 	 * Copy table's limits to the DM device's request_queue
 	 */
 	q->limits = *limits;
+
+	if (dm_table_is_nonrot(t))
+		queue_flag_set_unlocked(QUEUE_FLAG_NONROT, q);
+	else
+		queue_flag_clear_unlocked(QUEUE_FLAG_NONROT, q);
 
 	dm_table_set_integrity(t);
 
