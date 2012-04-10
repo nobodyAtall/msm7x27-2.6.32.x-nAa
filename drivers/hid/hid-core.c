@@ -659,13 +659,12 @@ int hid_parse_report(struct hid_device *device, __u8 *start,
 	memcpy(device->rdesc, start, size);
 	device->rsize = size;
 
-	parser = vmalloc(sizeof(struct hid_parser));
+	parser = vzalloc(sizeof(struct hid_parser));
 	if (!parser) {
 		ret = -ENOMEM;
 		goto err;
 	}
 
-	memset(parser, 0, sizeof(struct hid_parser));
 	parser->device = device;
 
 	end = start + size;

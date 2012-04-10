@@ -276,7 +276,7 @@ int netxen_alloc_sw_resources(struct netxen_adapter *adapter)
 
 		}
 		rds_ring->rx_buf_arr = (struct netxen_rx_buffer *)
-			vmalloc(RCV_BUFF_RINGSIZE(rds_ring));
+			vzalloc(RCV_BUFF_RINGSIZE(rds_ring));
 		if (rds_ring->rx_buf_arr == NULL) {
 			printk(KERN_ERR "%s: Failed to allocate "
 				"rx buffer ring %d\n",
@@ -284,7 +284,6 @@ int netxen_alloc_sw_resources(struct netxen_adapter *adapter)
 			/* free whatever was already allocated */
 			goto err_out;
 		}
-		memset(rds_ring->rx_buf_arr, 0, RCV_BUFF_RINGSIZE(rds_ring));
 		INIT_LIST_HEAD(&rds_ring->free_list);
 		/*
 		 * Now go through all of them, set reference handles
