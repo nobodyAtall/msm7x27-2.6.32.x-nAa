@@ -273,7 +273,6 @@ static int tcf_nat_dump(struct sk_buff *skb, struct tc_action *a,
 		.bindcnt  = p->tcf_bindcnt - bind,
 	};
 	struct tcf_t t;
-	int s;
 
 	NLA_PUT(skb, TCA_NAT_PARMS, sizeof(opt), &opt);
 	t.install = jiffies_to_clock_t(jiffies - p->tcf_tm.install);
@@ -281,13 +280,10 @@ static int tcf_nat_dump(struct sk_buff *skb, struct tc_action *a,
 	t.expires = jiffies_to_clock_t(p->tcf_tm.expires);
 	NLA_PUT(skb, TCA_NAT_TM, sizeof(t), &t);
 
-	kfree(opt);
-
 	return skb->len;
 
 nla_put_failure:
 	nlmsg_trim(skb, b);
-	kfree(opt);
 	return -1;
 }
 
