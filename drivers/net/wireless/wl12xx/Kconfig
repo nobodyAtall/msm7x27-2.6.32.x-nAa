@@ -51,7 +51,3 @@ config WL1271
 	  If you choose to build a module, it'll be called wl1271. Say N if
 	  unsure.
 
-config WL12XX_PLATFORM_DATA
-	depends on !MACH_SEMC_ZEUS
-	bool
-	default y
