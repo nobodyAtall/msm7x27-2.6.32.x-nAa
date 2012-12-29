@@ -44,6 +44,7 @@ struct wb_writeback_args {
 	int for_kupdate:1;
 	int range_cyclic:1;
 	int for_background:1;
+	int sb_pinned:1;
 };
 
 /*
@@ -229,6 +230,11 @@ static void bdi_sync_writeback(struct backing_dev_info *bdi,
 		.sync_mode	= WB_SYNC_ALL,
 		.nr_pages	= LONG_MAX,
 		.range_cyclic	= 0,
+		/*
+		 * Setting sb_pinned is not necessary for WB_SYNC_ALL, but
+		 * lets make it explicitly clear.
+		 */
+		.sb_pinned  = 1,
 	};
 	struct bdi_work work;
 
@@ -243,21 +249,23 @@ static void bdi_sync_writeback(struct backing_dev_info *bdi,
  * bdi_start_writeback - start writeback
  * @bdi: the backing device to write from
  * @nr_pages: the number of pages to write
+ * @sb_locked: caller already holds sb umount sem.
  *
  * Description:
  *   This does WB_SYNC_NONE opportunistic writeback. The IO is only
  *   started when this function returns, we make no guarentees on
- *   completion. Caller need not hold sb s_umount semaphore.
+ *   completion. Caller specifies whether sb umount sem is held already or not.
  *
  */
 void bdi_start_writeback(struct backing_dev_info *bdi, struct super_block *sb,
-			 long nr_pages)
+			 long nr_pages, int sb_locked)
 {
 	struct wb_writeback_args args = {
 		.sb		= sb,
 		.sync_mode	= WB_SYNC_NONE,
 		.nr_pages	= nr_pages,
 		.range_cyclic	= 1,
+		.sb_pinned  = sb_locked,
 	};
 
 	/*
@@ -584,7 +592,7 @@ static int pin_sb_for_writeback(struct writeback_control *wbc,
 	/*
 	 * Caller must already hold the ref for this
 	 */
-	if (wbc->sync_mode == WB_SYNC_ALL) {
+	if (wbc->sync_mode == WB_SYNC_ALL || wbc->sb_pinned) {
 		WARN_ON(!rwsem_is_locked(&sb->s_umount));
 		return 0;
 	}
@@ -749,6 +757,7 @@ static long wb_writeback(struct bdi_writeback *wb,
 		.older_than_this	= NULL,
 		.for_kupdate		= args->for_kupdate,
 		.range_cyclic		= args->range_cyclic,
+		.sb_pinned		= args->sb_pinned,
 	};
 	unsigned long oldest_jif;
 	long wrote = 0;
@@ -1191,6 +1200,18 @@ static void wait_sb_inodes(struct super_block *sb)
 	iput(old_inode);
 }
 
+static void __writeback_inodes_sb(struct super_block *sb, int sb_locked)
+{
+	unsigned long nr_dirty = global_page_state(NR_FILE_DIRTY);
+	unsigned long nr_unstable = global_page_state(NR_UNSTABLE_NFS);
+	long nr_to_write;
+
+	nr_to_write = nr_dirty + nr_unstable +
+		(inodes_stat.nr_inodes - inodes_stat.nr_unused);
+
+	bdi_start_writeback(sb->s_bdi, sb, nr_to_write, sb_locked);
+}
+
 /**
  * writeback_inodes_sb	-	writeback dirty inodes from given super_block
  * @sb: the superblock
@@ -1202,16 +1223,21 @@ static void wait_sb_inodes(struct super_block *sb)
  */
 void writeback_inodes_sb(struct super_block *sb)
 {
-	unsigned long nr_dirty = global_page_state(NR_FILE_DIRTY);
-	unsigned long nr_unstable = global_page_state(NR_UNSTABLE_NFS);
-	long nr_to_write;
-
-	nr_to_write = nr_dirty + nr_unstable +
-			(inodes_stat.nr_inodes - inodes_stat.nr_unused);
-
-	bdi_start_writeback(sb->s_bdi, sb, nr_to_write);
+	__writeback_inodes_sb(sb, 0);
 }
 EXPORT_SYMBOL(writeback_inodes_sb);
+
+/**
+ * writeback_inodes_sb_locked  - writeback dirty inodes from given super_block
+ * @sb: the superblock
+ *
+ * Like writeback_inodes_sb(), except the caller already holds the
+ * sb umount sem.
+ */
+void writeback_inodes_sb_locked(struct super_block *sb)
+{
+	__writeback_inodes_sb(sb, 1);
+}
 
 /**
  * writeback_inodes_sb_if_idle	-	start writeback if none underway
