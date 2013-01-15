@@ -827,20 +827,15 @@ void __init setup_arch(char **cmdline_p)
 	struct tag *tags = (struct tag *)&init_tags;
 	struct machine_desc *mdesc;
 	char *from = default_command_line;
-printk(KERN_NOTICE "setup_arch 1 \n");
-	unwind_init();
-printk(KERN_NOTICE "setup_arch 2 \n");
-	setup_processor();
-printk(KERN_NOTICE "setup_arch 3 \n");
-	mdesc = setup_machine(machine_arch_type);
-printk(KERN_NOTICE "setup_arch 4 \n");
-	machine_name = mdesc->name;
-printk(KERN_NOTICE "setup_arch 5 \n");
 
-	if (mdesc->soft_reboot) {
-printk(KERN_NOTICE "setup_arch 6 \n");
+	unwind_init();
+
+	setup_processor();
+	mdesc = setup_machine(machine_arch_type);
+	machine_name = mdesc->name;
+
+	if (mdesc->soft_reboot)
 		reboot_setup("s");
-}
 
 	if (__atags_pointer)
 		tags = phys_to_virt(__atags_pointer);
@@ -865,36 +860,32 @@ printk(KERN_NOTICE "setup_arch 6 \n");
 		save_atags(tags);
 		parse_tags(tags);
 	}
-printk(KERN_NOTICE "setup_arch 7 \n");
+
 	init_mm.start_code = (unsigned long) _text;
 	init_mm.end_code   = (unsigned long) _etext;
 	init_mm.end_data   = (unsigned long) _edata;
 	init_mm.brk	   = (unsigned long) _end;
 
 	memcpy(boot_command_line, from, COMMAND_LINE_SIZE);
-printk(KERN_NOTICE "setup_arch 8 \n");
 	boot_command_line[COMMAND_LINE_SIZE-1] = '\0';
 	parse_cmdline(cmdline_p, from);
-printk(KERN_NOTICE "setup_arch 9 \n");
 	paging_init(mdesc);
-printk(KERN_NOTICE "setup_arch 10 \n");
 	request_standard_resources(&meminfo, mdesc);
-printk(KERN_NOTICE "setup_arch 11 \n");
+
 #ifdef CONFIG_SMP
 	smp_init_cpus();
 #endif
-printk(KERN_NOTICE "setup_arch 12 \n");
+
 	cpu_init();
-printk(KERN_NOTICE "setup_arch 13 \n");
 	tcm_init();
-printk(KERN_NOTICE "setup_arch 14 \n");
+
 	/*
 	 * Set up various architecture-specific pointers
 	 */
 	init_arch_irq = mdesc->init_irq;
 	system_timer = mdesc->timer;
 	init_machine = mdesc->init_machine;
-printk(KERN_NOTICE "setup_arch 15 \n");
+
 #ifdef CONFIG_VT
 #if defined(CONFIG_VGA_CONSOLE)
 	conswitchp = &vga_con;
@@ -902,9 +893,7 @@ printk(KERN_NOTICE "setup_arch 15 \n");
 	conswitchp = &dummy_con;
 #endif
 #endif
-printk(KERN_NOTICE "setup_arch 16 \n");
 	early_trap_init();
-printk(KERN_NOTICE "setup_arch 17 \n");
 }
 
 
