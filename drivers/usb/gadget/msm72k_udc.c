@@ -511,7 +511,7 @@ static void ulpi_init(struct usb_info *ui)
 		return;
 
 	while (seq[0] >= 0) {
-		printk(KERN_ERR "ulpi: write 0x%02x to 0x%02x\n", seq[0], seq[1]);
+		printk(KERN_INFO "ulpi: write 0x%02x to 0x%02x\n", seq[0], seq[1]);
 		ulpi_write(ui, seq[0], seq[1]);
 		seq += 2;
 	}
@@ -688,14 +688,14 @@ int usb_ept_queue_xfer(struct msm_endpoint *ept, struct usb_request *_req)
 	if (req->busy) {
 		req->req.status = -EBUSY;
 		spin_unlock_irqrestore(&ui->lock, flags);
-		printk(KERN_ERR "usb_ept_queue_xfer() tried to queue busy request\n");
+		printk(KERN_INFO "usb_ept_queue_xfer() tried to queue busy request\n");
 		return -EBUSY;
 	}
 
 	if (!ui->online && (ept->num != 0)) {
 		req->req.status = -ESHUTDOWN;
 		spin_unlock_irqrestore(&ui->lock, flags);
-		printk(KERN_ERR "usb_ept_queue_xfer() called while offline\n");
+		printk(KERN_INFO "usb_ept_queue_xfer() called while offline\n");
 		return -ESHUTDOWN;
 	}
 
@@ -1052,7 +1052,7 @@ static void handle_endpoint(struct usb_info *ui, unsigned bit)
 			/* XXX pass on more specific error code */
 			req->req.status = -EIO;
 			req->req.actual = 0;
-			printk(KERN_ERR "ept %d %s error. info=%08x\n",
+			printk(KERN_INFO "ept %d %s error. info=%08x\n",
 			       ept->num,
 			       (ept->flags & EPT_FLAG_IN) ? "in" : "out",
 			       info);
@@ -1159,15 +1159,15 @@ static irqreturn_t usb_interrupt(int irq, void *data)
 	if (n & STS_PCI) {
 		switch (readl(USB_PORTSC) & PORTSC_PSPD_MASK) {
 		case PORTSC_PSPD_FS:
-			printk(KERN_ERR "portchange USB_SPEED_FULL\n");
+			printk(KERN_INFO "portchange USB_SPEED_FULL\n");
 			ui->gadget.speed = USB_SPEED_FULL;
 			break;
 		case PORTSC_PSPD_LS:
-			printk(KERN_ERR "portchange USB_SPEED_LOW\n");
+			printk(KERN_INFO "portchange USB_SPEED_LOW\n");
 			ui->gadget.speed = USB_SPEED_LOW;
 			break;
 		case PORTSC_PSPD_HS:
-			printk(KERN_ERR "portchange USB_SPEED_HIGH\n");
+			printk(KERN_INFO "portchange USB_SPEED_HIGH\n");
 			ui->gadget.speed = USB_SPEED_HIGH;
 			break;
 		}
@@ -1212,7 +1212,7 @@ static irqreturn_t usb_interrupt(int irq, void *data)
 	}
 
 	if (n & STS_URI) {
-		printk(KERN_ERR "reset\n");
+		printk(KERN_INFO "reset\n");
 
 		ui->usb_state = USB_STATE_DEFAULT;
 		ui->remote_wakeup = 0;
@@ -1245,7 +1245,7 @@ static irqreturn_t usb_interrupt(int irq, void *data)
 	}
 
 	if (n & STS_SLI) {
-		printk(KERN_ERR "suspend\n");
+		printk(KERN_INFO "suspend\n");
 		ui->usb_state = USB_STATE_SUSPENDED;
 		ui->driver->suspend(&ui->gadget);
 
@@ -1318,7 +1318,7 @@ static void usb_reset(struct usb_info *ui)
 	unsigned cfg_val;
 	struct msm_otg *otg = to_msm_otg(ui->xceiv);
 
-	printk(KERN_ERR "reset controller\n");
+	printk(KERN_INFO "reset controller\n");
 
 	if (otg->set_clk)
 		otg->set_clk(ui->xceiv, 1);
@@ -1404,7 +1404,7 @@ static void usb_start(struct usb_info *ui)
 
 static int usb_free(struct usb_info *ui, int ret)
 {
-	printk(KERN_ERR "usb_free(%d)\n", ret);
+	printk(KERN_INFO "usb_free(%d)\n", ret);
 
 	if (ui->xceiv)
 		otg_put_transceiver(ui->xceiv);
@@ -1712,7 +1712,7 @@ u8 usb_reenum_get_maxpower(void)
 	if (ui->reenum_work_need_more_delay)
 		ui->reenum_work_need_more_delay = 0;
 
-	printk(KERN_ERR "max_power: 0x%02X\n", max_power);
+	printk(KERN_INFO "max_power: 0x%02X\n", max_power);
 	return max_power;
 }
 
@@ -1776,12 +1776,12 @@ void usb_function_reenumerate(void)
 	struct usb_info *ui = the_usb_info;
 
 	/* disable and re-enable the D+ pullup */
-	printk(KERN_ERR "disable pullup\n");
+	printk(KERN_INFO "disable pullup\n");
 	writel(readl(USB_USBCMD) & ~USBCMD_RS, USB_USBCMD);
 
 	msleep(10);
 
-	printk(KERN_ERR "enable pullup\n");
+	printk(KERN_INFO "enable pullup\n");
 	writel(readl(USB_USBCMD) | USBCMD_RS, USB_USBCMD);
 }
 
@@ -2220,7 +2220,7 @@ static int msm72k_wakeup(struct usb_gadget *_gadget)
 	}
 	otg_set_suspend(ui->xceiv, 0);
 
-	disable_irq_nosync(otg->irq);
+	disable_irq(otg->irq);
 
 	if (!is_usb_active())
 		writel(readl(USB_PORTSC) | PORTSC_FPR, USB_PORTSC);
@@ -2372,7 +2372,7 @@ static int msm72k_probe(struct platform_device *pdev)
 	struct msm_otg *otg;
 	int retval;
 
-	printk(KERN_ERR "msm72k_probe\n");
+	printk(KERN_INFO "msm72k_probe\n");
 	ui = kzalloc(sizeof(struct usb_info), GFP_KERNEL);
 	if (!ui)
 		return -ENOMEM;
@@ -2450,10 +2450,9 @@ static int msm72k_probe(struct platform_device *pdev)
 
 int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 {
-	
 	struct usb_info *ui = the_usb_info;
 	int			retval, n;
-printk(KERN_ERR "usb_gadget_register_driver1\n");
+
 	if (!driver
 			|| driver->speed < USB_SPEED_FULL
 			|| !driver->bind
@@ -2464,7 +2463,7 @@ printk(KERN_ERR "usb_gadget_register_driver1\n");
 		return -ENODEV;
 	if (ui->driver)
 		return -EBUSY;
-printk(KERN_ERR "usb_gadget_register_driver2\n");
+
 	/* first hook up the driver ... */
 	ui->driver = driver;
 	ui->gadget.dev.driver = &driver->driver;
@@ -2473,7 +2472,7 @@ printk(KERN_ERR "usb_gadget_register_driver2\n");
 	ui->gadget.ep0 = &ui->ep0in.ep;
 	INIT_LIST_HEAD(&ui->gadget.ep0->ep_list);
 	ui->gadget.speed = USB_SPEED_UNKNOWN;
-printk(KERN_ERR "usb_gadget_register_driver3\n");
+
 	for (n = 1; n < 16; n++) {
 		struct msm_endpoint *ept = ui->ept + n;
 		list_add_tail(&ept->ep.ep_list, &ui->gadget.ep_list);
@@ -2484,48 +2483,42 @@ printk(KERN_ERR "usb_gadget_register_driver3\n");
 		list_add_tail(&ept->ep.ep_list, &ui->gadget.ep_list);
 		ept->ep.maxpacket = 512;
 	}
-printk(KERN_ERR "usb_gadget_register_driver4\n");
+
 	retval = device_add(&ui->gadget.dev);
 	if (retval)
 		goto fail;
-printk(KERN_ERR "usb_gadget_register_driver5\n");
+
 	retval = driver->bind(&ui->gadget);
-printk(KERN_ERR "usb_gadget_register_driver6\n");
 	if (retval) {
-		printk(KERN_ERR "bind to driver %s --> error %d\n",
+		printk(KERN_INFO "bind to driver %s --> error %d\n",
 				driver->driver.name, retval);
 		device_del(&ui->gadget.dev);
 		goto fail;
 	}
-printk(KERN_ERR "usb_gadget_register_driver7\n");
+
 	retval = device_create_file(&ui->gadget.dev, &dev_attr_usb_state);
-printk(KERN_ERR "usb_gadget_register_driver8\n");
 	if (retval != 0)
-		printk(KERN_ERR "failed to create sysfs entry: (usb_state) error: (%d)\n",
+		printk(KERN_INFO "failed to create sysfs entry: (usb_state) error: (%d)\n",
 					retval);
 	retval = device_create_file(&ui->gadget.dev, &dev_attr_usb_speed);
-printk(KERN_ERR "usb_gadget_register_driver9\n");
 	if (retval != 0)
-		printk(KERN_ERR "failed to create sysfs entry: (usb_speed) error: (%d)\n",
+		printk(KERN_INFO "failed to create sysfs entry: (usb_speed) error: (%d)\n",
 					retval);
-	printk(KERN_ERR "registered gadget driver '%s'\n",
+	printk(KERN_INFO "registered gadget driver '%s'\n",
 			driver->driver.name);
-printk(KERN_ERR "usb_gadget_register_driver10\n");
+
 	retval = device_create_file(&ui->gadget.dev, &dev_attr_chg_type);
-	printk(KERN_ERR "usb_gadget_register_driver11\n");
 	if (retval != 0)
 		dev_err(&ui->pdev->dev,
 			"failed to create sysfs entry(chg_type): err:(%d)\n",
 					retval);
 	retval = device_create_file(&ui->gadget.dev, &dev_attr_chg_current);
-	printk(KERN_ERR "usb_gadget_register_driver12\n");
 	if (retval != 0)
 		dev_err(&ui->pdev->dev,
 			"failed to create sysfs entry(chg_current):"
 			"err:(%d)\n", retval);
-printk(KERN_ERR "usb_gadget_register_driver13\n");
 	usb_start(ui);
-printk(KERN_ERR "usb_gadget_register_driver14\n");
+
 	return 0;
 
 fail:
