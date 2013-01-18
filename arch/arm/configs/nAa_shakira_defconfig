@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32.60
-# Fri Jan 18 15:26:27 2013
+# Fri Jan 18 17:15:58 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -455,6 +455,9 @@ CONFIG_FB_EARLYSUSPEND=y
 # CONFIG_PM_RUNTIME is not set
 CONFIG_PM_OPS=y
 CONFIG_ARCH_SUSPEND_POSSIBLE=y
+# CONFIG_ROBYN_UNDERVOLT is not set
+CONFIG_SHAKIRA_UNDERVOLT=m
+# CONFIG_MIMMI_UNDERVOLT is not set
 CONFIG_NET=y
 
 #
