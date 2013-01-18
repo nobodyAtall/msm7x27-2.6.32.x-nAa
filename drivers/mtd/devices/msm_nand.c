@@ -408,35 +408,28 @@ struct flash_identification {
 
 static struct flash_identification supported_flash[] =
 {
-	/* Flash ID   ID Mask Density(MB)  Wid Pgsz   Blksz   oobsz
-			Bsy  Recov  2nd_bbm    Manuf */
-	{0x00000000, 0xFFFFFFFF,         0, 0,    0,         0,  0,
-			 2,     7,       0 }, /*ONFI*/
-	{0x1500aaec, 0xFF00FFFF, (256<<20), 0, 2048, (2048<<6), 64,
-			 2,     7,       1 }, /*Sams*/
-	{0x5500baec, 0xFF00FFFF, (256<<20), 1, 2048, (2048<<6), 64,
-			 2,     7,       1 }, /*Sams*/
-	{0x6600bcec, 0xFF00FFFF, (512<<20), 1, 4096, (4096<<6), 128,
-			 2,     7,       1 }, /*Sams*/
-	{0x1500aa98, 0xFFFFFFFF, (256<<20), 0, 2048, (2048<<6), 64,
-			 2,     7,       0 }, /*Tosh*/
-	{0x5500ba98, 0xFFFFFFFF, (256<<20), 1, 2048, (2048<<6), 64,
-			 2,     7,       0 }, /*Tosh*/
-	{0xd580b12c, 0xFFFFFFFF, (128<<20), 1, 2048, (2048<<6), 64,
-			 2,     7,       0 }, /*Micr*/
-	{0x5580baad, 0xFFFFFFFF, (256<<20), 1, 2048, (2048<<6), 64,
-			 2,     7,       0 }, /*Hynx*/
-	{0x5510baad, 0xFFFFFFFF, (256<<20), 1, 2048, (2048<<6), 64,
-			 2,     7,       0 }, /*Hynx*/
-	{0x55d1b32c, 0xFFFFFFFF, (1024<<20), 1, 2048, (2048<<6), 64,
-			 9,     6,       0 }, /*Micr*/
-	{0x5591b398, 0xFFFFFFFF, (1024<<20), 1, 2048, (2048<<6), 64,
-			 9,     6,       0 }, /*Tosh*/
-	{0x6600b398, 0x7F00FFFF, (1024<<20), 1, 4096, (4096<<6), 128,
-			 9,     6,       0 }, /*Tosh*/
-	{0x6600b3ec, 0xFF00FFFF, (1024<<20), 1, 4096, (4096<<6), 128,
-			 9,     6,       1 }, /*Sams*/
-
+	/* Flash ID  ID Mask   Density(MB) Wid  Pgsz  Blksz oobsz cyc 2nd_bbm*/
+	/* ONFI */
+	{0x00000000, 0xFFFFFFFF,          0, 0,    0,         0,   0, 5, 0},
+	/* Samsung */
+	{0x1500aaec, 0xFF00FFFF,  (256<<20), 0, 2048, (2048<<6),  64, 5, 1},
+	{0x5500baec, 0xFF00FFFF,  (256<<20), 1, 2048, (2048<<6),  64, 5, 1},
+	{0x5500bcec, 0xFF00FFFF,  (512<<20), 1, 2048, (2048<<6),  64, 5, 1},
+	{0x6600bcec, 0xFF00FFFF,  (512<<20), 1, 4096, (4096<<6), 128, 5, 1},
+	{0x5501B3EC, 0xFFFFFFFF, (1024<<20), 1, 2048, (2048<<6),  64, 5, 1},
+	/* Toshiba */
+	{0x1500aa98, 0xFFFFFFFF,  (256<<20), 0, 2048, (2048<<6),  64, 5, 0},
+	{0x5500ba98, 0xFFFFFFFF,  (256<<20), 1, 2048, (2048<<6),  64, 5, 0},
+	{0x5591b398, 0x0000FFFF, (1024<<20), 1, 2048, (2048<<6),  64, 5, 0},
+	/* Micron */
+	{0xd580b12c, 0xFFFFFFFF,  (128<<20), 1, 2048, (2048<<6),  64, 5, 0},
+	{0x55d1b32c, 0xFFFFFFFF, (1024<<20), 1, 2048, (2048<<6),  64, 3, 0},
+	/* Hynx */
+	{0x5580baad, 0xFFFFFFFF,  (256<<20), 1, 2048, (2048<<6),  64, 5, 0},
+	{0x5510baad, 0xFFFFFFFF,  (256<<20), 1, 2048, (2048<<6),  64, 5, 0},
+	/* Numonyx */
+	{0x5510bc20, 0xFFFFFFFF,  (512<<20), 1, 2048, (2048<<6),  64, 5, 0},
+	{0x5551b320, 0xFFFFFFFF, (1024<<20), 1, 2048, (2048<<6),  64, 3, 0},
 	/* Note: Width flag is 0 for 8 bit Flash and 1 for 16 bit flash      */
 	/* Note: The First row will be filled at runtime during ONFI probe   */
 };
