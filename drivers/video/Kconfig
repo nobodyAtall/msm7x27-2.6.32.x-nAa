@@ -2368,6 +2368,20 @@ config FB_MSM_MDDI_PANEL_AUTO_DETECT
 	---help---
 	  Support for MDDI panel auto detect
 
+config FB_MSM_MDDI_HITACHI_QVGA_LCD
+	depends on FB_MSM
+	tristate "MDDI Hitachi QVGA LCD Panel"
+	select FB_MSM_MDDI
+	---help---
+	  Support for Hitachi QVGA MDDI LCD Panel (240x320)
+
+config FB_MSM_MDDI_SAMSUNG_QVGA_LCD
+	depends on FB_MSM
+	tristate "MDDI Samsung QVGA LCD Panel"
+	select FB_MSM_MDDI
+	---help---
+	  Support for Samsung QVGA MDDI LCD Panel (240x320)
+
 config FB_MSM_MDDI_PRISM_WVGA
 	bool "MDDI Prism WVGA Panel"
 	select FB_MSM_MDDI
@@ -2419,6 +2433,13 @@ config FB_MSM_MDDI_HITACHI_HVGA_LCD
 	select FB_MSM_MDDI
 	---help---
 	  Support for Hitachi HVGA MDDI LCD Panel (320x480)
+
+config FB_MSM_MDDI_SEMC_LCD_POWER_OFF_SLEEP_MODE
+	depends on FB_MSM
+	bool "PowerOff sleep mode"
+	select FB_MSM_MDDI
+	---help---
+	  Support for Power Off as Sleep mode
 
 config FB_MSM_SEMC_LCD_BACKLIGHT_CONTROL
 	depends on FB_MSM

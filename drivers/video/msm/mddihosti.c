@@ -2314,3 +2314,8 @@ void mddi_mhctl_remove(mddi_host_type host_idx)
 			  (void *)pmhctl->rev_data_buf,
 			  pmhctl->rev_data_dma_addr);
 }
+
+uint32 mddi_host_get_error_count(void)
+{
+	return mhctl[MDDI_HOST_PRIM].int_type.error_count;
+}

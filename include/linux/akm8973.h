@@ -24,6 +24,7 @@
 #define AKMIO				0xA1
 
 /* IOCTLs for AKM library */
+/*#define ECS_IOCTL_INIT                  _IO(AKMIO, 0x01)
 #define ECS_IOCTL_WRITE                 _IOW(AKMIO, 0x01, char[5])
 #define ECS_IOCTL_READ                  _IOWR(AKMIO, 0x02, char[5])
 #define ECS_IOCTL_RESET      	          _IO(AKMIO, 0x03)
@@ -35,6 +36,31 @@
 #define ECS_IOCTL_GET_DELAY             _IOR(AKMIO, 0x30, short)
 #define ECS_IOCTL_GET_PROJECT_NAME      _IOR(AKMIO, 0x0D, char[64])
 #define ECS_IOCTL_GET_MATRIX            _IOR(AKMIO, 0x0E, short [4][3][3])
+*/
+
+
+
+/* IOCTLs for AKM library */
+#define ECS_IOCTL_INIT                  _IO(AKMIO, 0x01)
+#define ECS_IOCTL_WRITE                 _IOW(AKMIO, 0x02, char[5])
+#define ECS_IOCTL_READ                  _IOWR(AKMIO, 0x03, char[5])
+#define ECS_IOCTL_RESET                _IO(AKMIO, 0x04)
+//#define ECS_IOCTL_INT_STATUS            _IO(AKMIO, 0x05)
+//#define ECS_IOCTL_FFD_STATUS            _IO(AKMIO, 0x06)
+#define ECS_IOCTL_SET_MODE              _IOW(AKMIO, 0x07, short)
+#define ECS_IOCTL_GETDATA               _IOR(AKMIO, 0x08, char[RBUFF_SIZE+1])
+#define ECS_IOCTL_GET_NUMFRQ            _IOR(AKMIO, 0x09, char[2])
+//#define ECS_IOCTL_SET_PERST             _IO(AKMIO, 0x0A)
+//#define ECS_IOCTL_SET_G0RST             _IO(AKMIO, 0x0B)
+#define ECS_IOCTL_SET_YPR               _IOW(AKMIO, 0x0C, short[12])
+#define ECS_IOCTL_GET_OPEN_STATUS       _IOR(AKMIO, 0x0D, int)
+#define ECS_IOCTL_GET_CLOSE_STATUS      _IOR(AKMIO, 0x0E, int)
+//#define ECS_IOCTL_GET_CALI_DATA         _IOR(AKMIO, 0x0F, char[MAX_CALI_SIZE])
+#define ECS_IOCTL_GET_DELAY             _IOR(AKMIO, 0x30, short)
+#define ECS_IOCTL_GET_PROJECT_NAME      _IOR(AKMIO, 0x0D, char[64])
+#define ECS_IOCTL_GET_MATRIX            _IOR(AKMIO, 0x0E, short [4][3][3])
+
+
 
 /* IOCTLs for APPs */
 #define ECS_IOCTL_APP_SET_MODE		_IOW(AKMIO, 0x10, short)

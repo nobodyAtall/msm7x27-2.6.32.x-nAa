@@ -164,7 +164,13 @@ do { \
 #define MDDI_HOST_TA2_LEN       0x001a
 #define MDDI_HOST_REV_RATE_DIV  0x0004
 #else
-#define MDDI_HOST_TA2_LEN       0x000c
+/*
+ * SEMC Patch: TA2 length should be 9 according to HITACHI specs
+ *
+ * #define MDDI_HOST_TA2_LEN       0x000c
+ */
+#define MDDI_HOST_TA2_LEN       0x0009
+
 #define MDDI_HOST_REV_RATE_DIV  0x0002
 #endif
 
@@ -603,4 +609,5 @@ uint32 mddi_get_client_id(void);
 void mddi_mhctl_remove(mddi_host_type host_idx);
 void mddi_host_timer_service(unsigned long data);
 void mddi_host_client_cnt_reset(void);
+uint32 mddi_host_get_error_count(void);
 #endif /* MDDIHOSTI_H */
