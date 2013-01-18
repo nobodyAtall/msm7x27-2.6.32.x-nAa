@@ -54,6 +54,7 @@ obj-$(CONFIG_TOUCHSCREEN_PCAP)		+= pcap_ts.o
 obj-$(CONFIG_TOUCHSCREEN_MSM_LEGACY)		+= msm_touch.o
 obj-$(CONFIG_TOUCHSCREEN_CY8C_TS)	+= cy8c_ts.o
 obj-$(CONFIG_TOUCHSCREEN_CY8CTMA300)	+= cy8ctma300_touch.o
+obj-$(CONFIG_TOUCHSCREEN_CY8CTMA300_SER)	+= cy8ctma300_ser.o
 obj-$(CONFIG_TOUCHSCREEN_CY8CTMA300_SPI)	+= cy8ctma300_spi.o
 obj-$(CONFIG_TOUCHSCREEN_CYTTSP_CORE)	+= cyttsp_core.o
 obj-$(CONFIG_TOUCHSCREEN_CYTTSP_SPI)	+= cyttsp_spi.o

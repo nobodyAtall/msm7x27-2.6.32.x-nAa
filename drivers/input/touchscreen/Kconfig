@@ -635,6 +635,19 @@ config TOUCHSCREEN_CY8CTMA300
         help
           Capactive touchscreen for SEMC devices using new Cypress hardware.
 
+config TOUCHSCREEN_CY8CTMA300_SER
+	default n
+	tristate "Cypress CY8CTMA300 serial touchscreen"
+	select SERIO
+	help
+	  Say Y here if you have a Cypress CY8CTMA300 touchscreen
+	  connected to your system's UART.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cy8ctma300_ser.
+
 config TOUCHSCREEN_CY8CTMA300_SPI
 	default n
 	depends on SPI_MASTER

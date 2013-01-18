@@ -300,6 +300,14 @@ config LEDS_MSM_PMIC_MISC
 	  This option enables support for Querty Keypad LED connected over PMIC
 	  (Power Management IC) chip on Qualcomm  boards
 
+config LEDS_MSM_PMIC_MISC_KEYPAD
+	bool "Misc leds: use keyboard led"
+	select LEDS_MSM_PMIC_MISC
+	default n
+	help
+	  This allows Keypad LED driver.
+	  If unsure, say N.
+
 config LEDS_MSM_PMIC
         tristate "LED Support for Qualcomm PMIC connected LEDs"
         default y
