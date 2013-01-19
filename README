@@ -1,3 +1,8 @@
+The 2.6.32.x-nAa-kernel is ported for the SEMC 4.1.B.1.13 sources for the 2010 msm7x27 phones line.
+I accept patches / ideas via any way possible, thanks!
+
+- nAa
+
 	Linux kernel release 2.6.xx <http://kernel.org/>
 
 These are the release notes for Linux version 2.6.  Read them carefully,
