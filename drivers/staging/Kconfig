@@ -123,7 +123,11 @@ source "drivers/staging/sep/Kconfig"
 
 source "drivers/staging/iio/Kconfig"
 
+source "drivers/staging/snappy/Kconfig"
+
 source "drivers/staging/zram/Kconfig"
+
+source "drivers/staging/zcache/Kconfig"
 
 endif # !STAGING_EXCLUDE_BUILD
 endif # STAGING
