@@ -274,7 +274,11 @@ static void adreno_setstate(struct kgsl_device *device,
 	 * writes For CFF dump we must idle and use the registers so that it is
 	 * easier to filter out the mmu accesses from the dump
 	 */
+#ifdef CONFIG_DEBUG_FS
 	if (!kgsl_cff_dump_enable && adreno_dev->drawctxt_active) {
+#else
+	if (adreno_dev->drawctxt_active) {
+#endif
 		if (flags & KGSL_MMUFLAGS_PTUPDATE) {
 			/* wait for graphics pipe to be idle */
 			*cmds++ = cp_type3_packet(CP_WAIT_FOR_IDLE, 1);
