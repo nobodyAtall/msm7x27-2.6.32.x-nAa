@@ -146,7 +146,7 @@ int seport_platform_register_button_gpio_callback(int (*func)(int, void *arg),
 		irq = gpio_to_irq(seport_conf->button_detect_pin);
 		if (0 <= irq) {
 			retval = request_irq(irq,
-					     func, IRQF_TRIGGER_FALLING,
+					     (irq_handler_t)func, IRQF_TRIGGER_FALLING,
 					     "seport_buttondetect",
 					     data);
 
@@ -240,7 +240,7 @@ int seport_platform_register_plug_detect_gpio_callback(
 	irq = gpio_to_irq(seport_conf->plug_detect_read_pin);
 	if (0 <= irq) {
 		err = request_irq(irq,
-				  func, IRQF_TRIGGER_RISING |
+				  (irq_handler_t)func, IRQF_TRIGGER_RISING |
 				  IRQF_TRIGGER_FALLING,
 				  "seport_plug_detect",
 				  data);
