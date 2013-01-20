@@ -103,7 +103,7 @@ int seport_plug_detect_open(struct inode *inode, struct file *filp)
 
 	seport_gpio_phf_callback(SEPORT_START_DONT_DISABLE_INTERRUPT, &pdd);
 
-	err = seport_platform_register_plug_detect_gpio_callback(
+	err = seport_platform_register_plug_detect_gpio_callback((int (*)(int,  void *))
 		seport_gpio_phf_callback, &pdd);
 	if (err) {
 		printk(KERN_ALERT "SEMC Systemconnector: Failed to setup GPIO callback. Goodbye!\n");
