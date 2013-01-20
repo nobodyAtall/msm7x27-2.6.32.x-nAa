@@ -92,3 +92,5 @@ vmlinux.lds
 lib/crc32table.h
 lib/gen_crc32table
 *.rej
+arch/arm/boot/compressed/lib1funcs.S
+*.lzo
