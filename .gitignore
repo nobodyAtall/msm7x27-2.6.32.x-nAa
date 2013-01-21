@@ -94,3 +94,5 @@ lib/gen_crc32table
 *.rej
 arch/arm/boot/compressed/lib1funcs.S
 *.lzo
+drivers/char/consolemap_deftbl.c
+drivers/char/defkeymap.c
