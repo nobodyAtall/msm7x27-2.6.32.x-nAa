@@ -340,7 +340,6 @@ void kgsl_pwrctrl_clk(struct kgsl_device *device, int state,
 		}
 	}
 }
-EXPORT_SYMBOL(kgsl_pwrctrl_clk);
 
 void kgsl_pwrctrl_axi(struct kgsl_device *device, int state)
 {
