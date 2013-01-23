@@ -5,6 +5,7 @@
 #
 
 HEAD	= head.o
+AFLAGS_head.o += -Wa,-march=armv6k
 OBJS	= misc.o
 FONTC	= $(srctree)/drivers/video/console/font_acorn_8x8.c
 
@@ -101,6 +102,7 @@ LDFLAGS_vmlinux += -X
 LDFLAGS_vmlinux += -T
 
 # For __aeabi_uidivmod
+AFLAGS_lib1funcs.o +=-Wa,-march=armv6k
 lib1funcs = $(obj)/lib1funcs.o
 
 $(obj)/lib1funcs.S: $(srctree)/arch/$(SRCARCH)/lib/lib1funcs.S FORCE
@@ -114,11 +116,14 @@ $(obj)/vmlinux: $(obj)/vmlinux.lds $(obj)/$(HEAD) $(obj)/piggy.$(suffix_y).o \
 	 	$(addprefix $(obj)/, $(OBJS)) $(lib1funcs) FORCE
 	$(call if_changed,ld)
 	@:
+AFLAGS_piggy.o += -Wa,-march=armv6k
 
+AFLAGS_piggy.$(suffix_y).o += -Wa,-march=armv6k
 $(obj)/piggy.$(suffix_y): $(obj)/../Image FORCE
 	$(call if_changed,$(suffix_y))
 
 $(obj)/piggy.$(suffix_y).o:  $(obj)/piggy.$(suffix_y) FORCE
+AFLAGS_piggy.o += -Wa,-march=armv6k
 
 CFLAGS_font.o := -Dstatic=
 

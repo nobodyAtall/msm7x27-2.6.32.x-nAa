@@ -203,8 +203,6 @@ struct xt_action_param {
 		const void *matchinfo, *targinfo;
 	};
 	const struct net_device *in, *out;
-	const struct xt_match *match;
-	const void *matchinfo;
 	int fragoff;
 	unsigned int thoff;
 	unsigned int hooknum;
