@@ -327,8 +327,8 @@ MODFLAGS	= -DMODULE
 CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  = -T $(srctree)/scripts/module-common.lds
-CFLAGS_KERNEL	=
-AFLAGS_KERNEL	=
+CFLAGS_KERNEL   = -O2 -fomit-frame-pointer -pipe -ffast-math -mtune=arm1136jf-s -mfloat-abi=softfp -fsingle-precision-constant -mfpu=vfp
+AFLAGS_KERNEL	= -O2 -fomit-frame-pointer -pipe -ffast-math -mtune=arm1136jf-s -mfloat-abi=softfp -fsingle-precision-constant -mfpu=vfp
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
 
