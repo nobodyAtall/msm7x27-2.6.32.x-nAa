@@ -156,7 +156,7 @@ config MACH_MSM7X27_ROBYN
 	depends on ARCH_MSM7X27
 	depends on !MSM_STACKED_MEMORY
 	default n
-	select TI1271
+	select TI1271 if !COMPAT_WIRELESS
 	bool "MSM7x27 Robyn"
 	help
 	  Support for the Robyn SEMC product using MSM7x27.
@@ -167,7 +167,7 @@ config MACH_MSM7X27_MIMMI
 	default n
 	select SEMC_GPIO_MATRIX_DRIVER
 	select SEMC_GPIO_INPUT_DRIVER
-	select TI1271
+	select TI1271 if !COMPAT_WIRELESS
 	bool "MSM7x27 Mimmi"
 	help
 	  Support for the Mimmi SEMC product using MSM7x27.
@@ -176,7 +176,7 @@ config MACH_MSM7X27_SHAKIRA
         depends on ARCH_MSM7X27
         depends on !MSM_STACKED_MEMORY
         default n
-        select TI1271
+        select TI1271 if !COMPAT_WIRELESS
         bool "MSM7x27 Shakira"
         help
           Support for the Shakira SEMC product using MSM7x27.
@@ -512,6 +512,7 @@ choice
 endchoice
 
 config TI1271
+	depends on !COMPAT_WIRELESS
 	bool "Use connectivity driver and config for TI1271"
 	default n
 	select WIRELESS_EXT

@@ -175,7 +175,7 @@ static inline void device_unlock(struct device *dev)
 	.prod_id_hash = { 0, 0, (vh3), 0 }, }
 #endif
 
-#define rcu_dereference_check(p, c) rcu_dereference(p)
+//#define rcu_dereference_check(p, c) rcu_dereference(p)
 
 /**
  *	sysfs_attr_init - initialize a dynamically allocated sysfs attribute
