@@ -1009,16 +1009,15 @@ config MSM_CPU_FREQ_MIN
 	depends on MSM_CPU_FREQ_SET_MIN_MAX
 	default 245760
 
-config MSM7X27_OVERCLOCK
-	bool "Enable SoC overclocking"
-	depends on MSM_CPU_FREQ_SET_MIN_MAX
+config OVERCLOCK_AHB
+	bool "Overclock the AHB-bus with 50% for all frequencies from 480MHz and above."
 	default n
 	help
-	  Enable support for non-standard acpuclock frequencies/voltages.
+	  Increases the speed of memory read/writes but can cause instability.
+	  If unsure, choose N.
 
 config MSM7X27_BACONMAKER
 	bool "Enable SoC overclocking to dangerous frequencies"
-	depends on MSM7X27_OVERCLOCK
 	default n
 	help
 	  Enable support for dangerous acpuclock frequencies/voltages.
