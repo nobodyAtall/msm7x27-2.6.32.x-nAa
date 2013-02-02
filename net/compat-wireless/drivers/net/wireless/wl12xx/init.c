@@ -586,45 +586,49 @@ int wl1271_hw_init(struct wl1271 *wl)
 	struct conf_tx_tid *conf_tid;
 	int ret, i;
 	bool is_ap = (wl->bss_type == BSS_TYPE_AP_BSS);
-
+pr_err(KERN_ERR "%s 1\n", __func__);
 	if (wl->chip.id == CHIP_ID_1283_PG20)
 		ret = wl128x_cmd_general_parms(wl);
 	else
 		ret = wl1271_cmd_general_parms(wl);
 	if (ret < 0)
 		return ret;
-
+pr_err(KERN_ERR "%s 2\n", __func__);
 	if (wl->chip.id == CHIP_ID_1283_PG20)
 		ret = wl128x_cmd_radio_parms(wl);
-	else
+	else{
 		ret = wl1271_cmd_radio_parms(wl);
+pr_err(KERN_ERR "%s 3\n", __func__);}
 	if (ret < 0)
 		return ret;
-
+pr_err(KERN_ERR "%s 4\n", __func__);
 	/* Chip-specific init */
 	ret = wl1271_chip_specific_init(wl);
+pr_err(KERN_ERR "%s 5\n", __func__);
 	if (ret < 0)
 		return ret;
-
+pr_err(KERN_ERR "%s 6\n", __func__);
 	/* Mode specific init */
-	if (is_ap)
+	if (is_ap){
 		ret = wl1271_ap_hw_init(wl);
-	else
+pr_err(KERN_ERR "%s 7\n", __func__);}
+	else{
+pr_err(KERN_ERR "%s 8\n", __func__);
 		ret = wl1271_sta_hw_init(wl);
-
+}
 	if (ret < 0)
 		return ret;
-
+pr_err(KERN_ERR "%s 9\n", __func__);
 	/* Bluetooth WLAN coexistence */
 	ret = wl1271_init_pta(wl);
 	if (ret < 0)
 		return ret;
-
+pr_err(KERN_ERR "%s 10\n", __func__);
 	/* Default memory configuration */
 	ret = wl1271_acx_init_mem_config(wl);
 	if (ret < 0)
 		return ret;
-
+pr_err(KERN_ERR "%s 11\n", __func__);
 	/* RX config */
 	ret = wl1271_init_rx_config(wl,
 				    RX_CFG_PROMISCUOUS | RX_CFG_TSF,
@@ -633,21 +637,21 @@ int wl1271_hw_init(struct wl1271 *wl)
 	   RX_FILTER_OPTION_FILTER_ALL); */
 	if (ret < 0)
 		goto out_free_memmap;
-
+pr_err(KERN_ERR "%s 12\n", __func__);
 	/* PHY layer config */
 	ret = wl1271_init_phy_config(wl);
 	if (ret < 0)
 		goto out_free_memmap;
-
+pr_err(KERN_ERR "%s 13\n", __func__);
 	ret = wl1271_acx_dco_itrim_params(wl);
 	if (ret < 0)
 		goto out_free_memmap;
-
+pr_err(KERN_ERR "%s 14\n", __func__);
 	/* Configure TX patch complete interrupt behavior */
 	ret = wl1271_acx_tx_config_options(wl);
 	if (ret < 0)
 		goto out_free_memmap;
-
+pr_err(KERN_ERR "%s 15\n", __func__);
 	/* RX complete interrupt pacing */
 	ret = wl1271_acx_init_rx_interrupt(wl);
 	if (ret < 0)
@@ -657,12 +661,12 @@ int wl1271_hw_init(struct wl1271 *wl)
 	ret = wl1271_init_energy_detection(wl);
 	if (ret < 0)
 		goto out_free_memmap;
-
+pr_err(KERN_ERR "%s 16\n", __func__);
 	/* Default fragmentation threshold */
 	ret = wl1271_acx_frag_threshold(wl, wl->hw->wiphy->frag_threshold);
 	if (ret < 0)
 		goto out_free_memmap;
-
+pr_err(KERN_ERR "%s 17\n", __func__);
 	/* Default TID/AC configuration */
 	BUG_ON(wl->conf.tx.tid_conf_count != wl->conf.tx.ac_conf_count);
 	for (i = 0; i < wl->conf.tx.tid_conf_count; i++) {
@@ -672,7 +676,7 @@ int wl1271_hw_init(struct wl1271 *wl)
 					conf_ac->tx_op_limit);
 		if (ret < 0)
 			goto out_free_memmap;
-
+pr_err(KERN_ERR "%s 18\n", __func__);
 		conf_tid = &wl->conf.tx.tid_conf[i];
 		ret = wl1271_acx_tid_cfg(wl, conf_tid->queue_id,
 					 conf_tid->channel_type,
@@ -684,7 +688,7 @@ int wl1271_hw_init(struct wl1271 *wl)
 		if (ret < 0)
 			goto out_free_memmap;
 	}
-
+pr_err(KERN_ERR "%s 19\n", __func__);
 	/* Enable data path */
 	ret = wl1271_cmd_data_path(wl, 1);
 	if (ret < 0)
@@ -708,7 +712,7 @@ int wl1271_hw_init(struct wl1271 *wl)
 
 	if (ret < 0)
 		goto out_free_memmap;
-
+pr_err(KERN_ERR "%s 20\n", __func__);
 	ret = wl1271_acx_set_rate_mgmt_params(wl);
 	if (ret < 0)
 		goto out_free_memmap;
@@ -724,7 +728,7 @@ int wl1271_hw_init(struct wl1271 *wl)
 		goto out_free_memmap;
 
 	return 0;
-
+pr_err(KERN_ERR "%s 21\n", __func__);
  out_free_memmap:
 	kfree(wl->target_mem_map);
 	wl->target_mem_map = NULL;

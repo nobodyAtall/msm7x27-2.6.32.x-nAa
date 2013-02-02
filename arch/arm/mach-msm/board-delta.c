@@ -2422,6 +2422,20 @@ static struct mmc_platform_data msm7x27_sdcc_data2 = {
 	.translate_vdd	= msm_sdcc_setup_power,
 };*/
 
+extern int delta_wifi_power(int on);
+
+/* Wifi chip power control */
+static uint32_t wifi_setup_power(struct device *dv, unsigned int vdd)
+{
+	uint32_t ret = msm_sdcc_setup_power(dv, vdd);
+printk(KERN_ERR "%s: %d\n", __func__, vdd);
+	if (vdd)
+		delta_wifi_power(1);
+	else
+		delta_wifi_power(0);
+	return ret;
+}
+
 #ifdef CONFIG_MMC_MSM_SDC1_SUPPORT
 static struct mmc_platform_data msm7x27_sdcc_data1 = {
 	.ocr_mask	= MMC_VDD_28_29,
@@ -2440,7 +2454,7 @@ static struct mmc_platform_data msm7x27_sdcc_data1 = {
 #ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
 static struct mmc_platform_data msm7x27_sdcc_data2 = {
 	.ocr_mask	= MMC_VDD_28_29,
-	.translate_vdd	= msm_sdcc_setup_power,
+	.translate_vdd	= wifi_setup_power,
 	.mmc_bus_width  = MMC_CAP_4_BIT_DATA,
 #ifdef CONFIG_MMC_MSM_SDIO_SUPPORT
 	.sdiowakeup_irq = MSM_GPIO_TO_INT(66),

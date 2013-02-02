@@ -614,7 +614,7 @@ static void wl1271_rx_streaming_timer(unsigned long data)
 
 static void wl1271_conf_init(struct wl1271 *wl)
 {
-
+pr_err(KERN_ERR "%s 1\n", __func__);
 	/*
 	 * This function applies the default configuration to the driver. This
 	 * function is invoked upon driver load (spi probe.)
@@ -644,7 +644,7 @@ static void wl1271_conf_init(struct wl1271 *wl)
 			wl1271_error("Unknown fwlog parameter %s", fwlog_param);
 		}
 	}
-
+pr_err(KERN_ERR "%s 2\n", __func__);
 	wl->ref_clock = -1;
 	if (fref_param) {
 		if (!strcmp(fref_param, "19.2"))
@@ -691,7 +691,7 @@ static int wl1271_plt_init(struct wl1271 *wl)
 	struct conf_tx_ac_category *conf_ac;
 	struct conf_tx_tid *conf_tid;
 	int ret, i;
-
+pr_err(KERN_ERR "%s 1\n", __func__);
 	if (wl->chip.id == CHIP_ID_1283_PG20)
 		ret = wl128x_cmd_general_parms(wl);
 	else
@@ -713,12 +713,12 @@ static int wl1271_plt_init(struct wl1271 *wl)
 	}
 	if (ret < 0)
 		return ret;
-
+pr_err(KERN_ERR "%s 2\n", __func__);
 	/* Chip-specific initializations */
 	ret = wl1271_chip_specific_init(wl);
 	if (ret < 0)
 		return ret;
-
+pr_err(KERN_ERR "%s 3\n", __func__);
 	ret = wl1271_sta_init_templates_config(wl);
 	if (ret < 0)
 		return ret;
@@ -786,7 +786,7 @@ static int wl1271_plt_init(struct wl1271 *wl)
 		if (ret < 0)
 			goto out_free_memmap;
 	}
-
+pr_err(KERN_ERR "%s 4\n", __func__);
 	/* Enable data path */
 	ret = wl1271_cmd_data_path(wl, 1);
 	if (ret < 0)
@@ -803,7 +803,7 @@ static int wl1271_plt_init(struct wl1271 *wl)
 		goto out_free_memmap;
 
 	return 0;
-
+pr_err(KERN_ERR "%s 5\n", __func__);
  out_free_memmap:
 	kfree(wl->target_mem_map);
 	wl->target_mem_map = NULL;
@@ -1254,7 +1254,7 @@ static void wl12xx_read_fwlog_panic(struct wl1271 *wl)
 	/* Read the first memory block address */
 	wl1271_fw_status(wl, wl->fw_status);
 	first_addr = __le32_to_cpu(wl->fw_status->log_start_addr);
-	printk("First address of fwlogger = 0x%x\n", first_addr);
+	pr_err("First address of fwlogger = 0x%x\n", first_addr);
 	if (!first_addr)
 		goto out;
 
@@ -1365,7 +1365,7 @@ static int wl12xx_chip_wakeup(struct wl1271 *wl, bool plt)
 {
 	struct wl1271_partition_set partition;
 	int ret = 0;
-
+pr_err(KERN_ERR "%s 1\n", __func__);
 	msleep(WL1271_PRE_POWER_ON_SLEEP);
 	ret = wl1271_power_on(wl);
 	if (ret < 0)
@@ -1373,7 +1373,7 @@ static int wl12xx_chip_wakeup(struct wl1271 *wl, bool plt)
 	msleep(WL1271_POWER_ON_SLEEP);
 	wl1271_io_reset(wl);
 	wl1271_io_init(wl);
-
+pr_err(KERN_ERR "%s 2\n", __func__);
 	/* We don't need a real memory partition here, because we only want
 	 * to use the registers at this point. */
 	memset(&partition, 0, sizeof(partition));
@@ -5229,7 +5229,7 @@ int wl1271_init_ieee80211(struct wl1271 *wl)
 		WLAN_CIPHER_SUITE_CCMP,
 		WL1271_CIPHER_SUITE_GEM,
 	};
-
+pr_err(KERN_ERR "%s 1\n", __func__);
 	/* The tx descriptor buffer and the TKIP space. */
 	wl->hw->extra_tx_headroom = WL1271_EXTRA_SPACE_TKIP +
 		sizeof(struct wl1271_tx_hw_descr);
@@ -5315,7 +5315,7 @@ struct ieee80211_hw *wl1271_alloc_hw(void)
 	struct wl1271 *wl;
 	int i, j, ret;
 	unsigned int order;
-
+pr_err(KERN_ERR "%s 1\n", __func__);
 	hw = ieee80211_alloc_hw(sizeof(*wl), &wl1271_ops);
 	if (!hw) {
 		wl1271_error("could not alloc ieee80211_hw");
@@ -5366,7 +5366,7 @@ struct ieee80211_hw *wl1271_alloc_hw(void)
 		ret = -ENOMEM;
 		goto err_hw;
 	}
-
+pr_err(KERN_ERR "%s 2\n", __func__);
 	wl->channel = WL1271_DEFAULT_CHANNEL;
 	wl->beacon_int = WL1271_DEFAULT_BEACON_INT;
 	wl->default_key = 0;
@@ -5423,7 +5423,7 @@ struct ieee80211_hw *wl1271_alloc_hw(void)
 	wake_lock_init(&wl->wake_lock, WAKE_LOCK_SUSPEND, "wl1271_wake");
 	wake_lock_init(&wl->rx_wake, WAKE_LOCK_SUSPEND, "rx_wake");
 #endif
-
+pr_err(KERN_ERR "%s 3\n", __func__);
 	wl->state = WL1271_STATE_OFF;
 	wl->fw_type = WL12XX_FW_TYPE_NONE;
 	mutex_init(&wl->mutex);
@@ -5481,7 +5481,7 @@ struct ieee80211_hw *wl1271_alloc_hw(void)
 		wl1271_error("failed to create sysfs file fwlog");
 		goto err_hw_pg_ver;
 	}
-
+pr_err(KERN_ERR "%s 4\n", __func__);
 	return hw;
 
 err_hw_pg_ver:

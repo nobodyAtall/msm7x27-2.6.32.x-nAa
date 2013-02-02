@@ -155,10 +155,14 @@ obj-$(CONFIG_MOGAMI_VIBRATOR) += vibrator-mogami.o
 
 obj-$(CONFIG_MACH_SEMC_PHOENIX) += board-semc_zeus.o keypad-zeus.o board-semc_zeus-wifi.o board-semc_zeus-rfkill.o
 
-obj-$(CONFIG_ARCH_MSM7X27) += generic_gpio.o devices-msm7x27.o msm_vibrator.o
-obj-$(CONFIG_MACH_MSM7X27_ROBYN) += board-delta.o board-robyn-keypad.o
-obj-$(CONFIG_MACH_MSM7X27_MIMMI) += board-delta.o board-mimmi-keypad.o
-obj-$(CONFIG_MACH_MSM7X27_SHAKIRA) += board-delta.o board-shakira-keypad.o
+ifdef CONFIG_COMPAT_WIRELESS
+obj-$(CONFIG_ARCH_MSM7X27) += board-delta.o generic_gpio.o devices-msm7x27.o msm_vibrator.o board-semc_delta-wifi.o
+else
+obj-$(CONFIG_ARCH_MSM7X27) += board-delta.o generic_gpio.o devices-msm7x27.o msm_vibrator.o
+endif
+obj-$(CONFIG_MACH_MSM7X27_ROBYN) += board-robyn-keypad.o
+obj-$(CONFIG_MACH_MSM7X27_MIMMI) += board-mimmi-keypad.o
+obj-$(CONFIG_MACH_MSM7X27_SHAKIRA) += board-shakira-keypad.o
 
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire.o board-sapphire-gpio.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-keypad.o board-sapphire-panel.o

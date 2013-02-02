@@ -272,15 +272,15 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 	struct wl1271 *wl;
 	unsigned long irqflags;
 	int ret;
-
+pr_err("%s 1\n", __func__);
 	/* We are only able to handle the wlan function */
 	if (func->num != 0x02)
 		return -ENODEV;
-
+pr_err("%s 2\n", __func__);
 	hw = wl1271_alloc_hw();
 	if (IS_ERR(hw))
 		return PTR_ERR(hw);
-
+pr_err("%s 3\n", __func__);
 	wl = hw->priv;
 
 	wl->if_priv = func;
@@ -291,26 +291,27 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 
 	/* Use block mode for transferring over one block size of data */
 	//func->card->quirks |= MMC_QUIRK_BLKSZ_FOR_BYTE_MODE;
-
+pr_err("%s 4\n", __func__);
 	wlan_data = wl12xx_get_platform_data();
 	if (IS_ERR(wlan_data)) {
 		ret = PTR_ERR(wlan_data);
+pr_err("%s 5\n", __func__);
 		wl1271_error("missing wlan platform data: %d", ret);
 		goto out_free;
 	}
-
+pr_err("%s 6\n", __func__);
 	wl->irq = wlan_data->irq;
 	if (wl->ref_clock < 0)
 		wl->ref_clock = wlan_data->board_ref_clock;
 	if (wl->tcxo_clock < 0)
 		wl->tcxo_clock = wlan_data->board_tcxo_clock;
 	wl->platform_quirks = wlan_data->platform_quirks;
-
+pr_err("%s 7\n", __func__);
 	if (wl->platform_quirks & WL12XX_PLATFORM_QUIRK_EDGE_IRQ)
 		irqflags = IRQF_TRIGGER_RISING;
 	else
 		irqflags = IRQF_TRIGGER_HIGH | IRQF_ONESHOT;
-
+pr_err("%s 8\n", __func__);
 	ret = request_threaded_irq(wl->irq, wl1271_hardirq, wl1271_irq,
 				   irqflags,
 				   DRIVER_NAME, wl);
@@ -320,25 +321,26 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 	}
 
 	disable_irq(wl->irq);
-
+pr_err("%s 9\n", __func__);
 	sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
 
 	ret = wl1271_init_ieee80211(wl);
+
 	if (ret)
 		goto out_irq;
-
+pr_err("%s 10\n", __func__);
 	ret = wl1271_register_hw(wl);
 	if (ret)
 		goto out_irq;
 
 	sdio_set_drvdata(func, wl);
-
+pr_err("%s 11\n", __func__);
 	/* Tell PM core that we don't need the card to be powered now */
 	pm_runtime_put_noidle(&func->dev);
 	mmc_power_save_host(func->card->host);
 
 	return 0;
-
+pr_err("%s 12\n", __func__);
  out_irq:
 	free_irq(wl->irq, wl);
 
@@ -387,7 +389,7 @@ static int wl1271_suspend(struct device *dev)
 			goto out;
 		}
 
-		printk("\n\nSetting MMC_PM_KEEP_POWER\n");
+		pr_err("\n\nSetting MMC_PM_KEEP_POWER\n");
 		/* keep power while host suspended */
 		ret = sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
 		if (ret) {
@@ -407,7 +409,7 @@ static int wl1271_resume(struct device *dev)
 	struct sdio_func *func = dev_to_sdio_func(dev);
 	struct wl1271 *wl = sdio_get_drvdata(func);
 
-	printk("%s\n", __func__);
+	pr_err("%s\n", __func__);
 	wl1271_debug(DEBUG_MAC80211, "wl1271 resume");
 	if (wl->wow_enabled) {
 		/* claim back host */
@@ -434,12 +436,16 @@ static struct sdio_driver wl1271_sdio_driver = {
 
 static int __init wl1271_init(void)
 {
+pr_err("%s 1\n", __func__);
 	return sdio_register_driver(&wl1271_sdio_driver);
+pr_err("%s 2\n", __func__);
 }
 
 static void __exit wl1271_exit(void)
 {
+pr_err("%s 1\n", __func__);
 	sdio_unregister_driver(&wl1271_sdio_driver);
+pr_err("%s 2\n", __func__);
 }
 
 module_init(wl1271_init);
