@@ -1646,12 +1646,6 @@ config ARCH_SUSPEND_POSSIBLE
 
 endmenu
 
-source "drivers/uv_robyn/Kconfig"
-
-source "drivers/uv_shakira/Kconfig"
-
-source "drivers/uv_mimmi/Kconfig"
-
 source "net/Kconfig"
 
 source "drivers/Kconfig"

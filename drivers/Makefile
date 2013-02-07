@@ -112,6 +112,3 @@ obj-$(CONFIG_VLYNQ)		+= vlynq/
 obj-$(CONFIG_STAGING)		+= staging/
 obj-y				+= platform/
 obj-y				+= ieee802154/
-obj-$(CONFIG_ROBYN_UNDERVOLT)     += uv_robyn/
-obj-$(CONFIG_SHAKIRA_UNDERVOLT)   += uv_shakira/
-obj-$(CONFIG_MIMMI_UNDERVOLT)     += uv_mimmi/
