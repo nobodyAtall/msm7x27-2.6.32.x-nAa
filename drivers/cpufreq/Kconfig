@@ -397,7 +397,7 @@ config CPU_FREQ_SAMPLING_LATENCY_MULTIPLIER
 config CPU_FREQ_VDD_LEVELS
 	bool "CPU Vdd levels sysfs interface"
 	depends on CPU_FREQ_STAT
-	depends on ARCH_MSM7X30
+	depends on ARCH_MSM7X27
 	default n
 	help
 	  CPU Vdd levels sysfs interface
