@@ -357,7 +357,16 @@ struct cpu_vfs_cap_data {
 
 #define CAP_MAC_ADMIN        33
 
-#define CAP_LAST_CAP         CAP_MAC_ADMIN
+/* Allow configuring the kernel's syslog (printk behaviour) */
+
+#define CAP_SYSLOG           34
+
+/* Allow triggering something that will wake the system */
+
+#define CAP_WAKE_ALARM            35
+
+
+#define CAP_LAST_CAP         CAP_WAKE_ALARM
 
 #define cap_valid(x) ((x) >= 0 && (x) <= CAP_LAST_CAP)
 
