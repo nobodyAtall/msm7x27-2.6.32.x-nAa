@@ -2398,7 +2398,22 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 	return 0;
 }
 
-/*static unsigned int robyn_sdcc_slot_status(struct device *dev)
+#ifdef CONFIG_COMPAT_WIRELESS
+extern int delta_wifi_power(int on);
+
+/* Wifi chip power control */
+static uint32_t wifi_setup_power(struct device *dv, unsigned int vdd)
+{
+	uint32_t ret = msm_sdcc_setup_power(dv, vdd);
+	if (vdd)
+		delta_wifi_power(1);
+	else
+		delta_wifi_power(0);
+	return ret;
+}
+#endif
+
+static unsigned int robyn_sdcc_slot_status(struct device *dev)
 {
 	unsigned int ret = 0;
 	if (gpio_get_value(49))
@@ -2406,70 +2421,38 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 	else
 		ret = 1;
 	return ret;
-}*/
+}
 
-/*static struct mmc_platform_data msm7x27_sdcc_data1 = {
+static struct mmc_platform_data msm7x27_sdcc_data1 = {
 	.ocr_mask	= MMC_VDD_28_29,
 	.translate_vdd	= msm_sdcc_setup_power,
 	.status = robyn_sdcc_slot_status,
 	.status_irq	= MSM_GPIO_TO_INT(49),
 	.irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 	.mmc_bus_width = MMC_CAP_4_BIT_DATA,
-};
-
-static struct mmc_platform_data msm7x27_sdcc_data2 = {
-	.ocr_mask	= MMC_VDD_28_29,
-	.translate_vdd	= msm_sdcc_setup_power,
-};*/
-
-extern int delta_wifi_power(int on);
-
-/* Wifi chip power control */
-static uint32_t wifi_setup_power(struct device *dv, unsigned int vdd)
-{
-	uint32_t ret = msm_sdcc_setup_power(dv, vdd);
-printk(KERN_ERR "%s: %d\n", __func__, vdd);
-	if (vdd)
-		delta_wifi_power(1);
-	else
-		delta_wifi_power(0);
-	return ret;
-}
-
-#ifdef CONFIG_MMC_MSM_SDC1_SUPPORT
-static struct mmc_platform_data msm7x27_sdcc_data1 = {
-	.ocr_mask	= MMC_VDD_28_29,
-	.translate_vdd	= msm_sdcc_setup_power,
-	.mmc_bus_width  = MMC_CAP_4_BIT_DATA,
 	.msmsdcc_fmin	= 144000,
 	.msmsdcc_fmid	= 24576000,
 	.msmsdcc_fmax	= 49152000,
 	.nonremovable	= 0,
-#ifdef CONFIG_MMC_MSM_SDC1_DUMMY52_REQUIRED
-	.dummy52_required = 1,
-#endif
 };
-#endif
 
-#ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
+#ifdef CONFIG_COMPAT_WIRELESS
+static struct mmc_platform_data msm7x27_sdcc_data2 = {
+	.ocr_mask = MMC_VDD_28_29,
+	.translate_vdd = wifi_setup_power,
+	.mmc_bus_width = MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD,
+	.sdiowakeup_irq = MSM_GPIO_TO_INT(66),
+	.msmsdcc_fmin = 144000,
+	.msmsdcc_fmid = 24576000,
+	.msmsdcc_fmax = 49152000,
+	.nonremovable = 1,
+};
+#else
 static struct mmc_platform_data msm7x27_sdcc_data2 = {
 	.ocr_mask	= MMC_VDD_28_29,
-	.translate_vdd	= wifi_setup_power,
-	.mmc_bus_width  = MMC_CAP_4_BIT_DATA,
-#ifdef CONFIG_MMC_MSM_SDIO_SUPPORT
-	.sdiowakeup_irq = MSM_GPIO_TO_INT(66),
-#endif
-	.msmsdcc_fmin	= 144000,
-	.msmsdcc_fmid	= 24576000,
-	.msmsdcc_fmax	= 49152000,
-	.nonremovable	= 1,
-#ifdef CONFIG_MMC_MSM_SDC2_DUMMY52_REQUIRED
-	.dummy52_required = 1,
-#endif
+	.translate_vdd	= msm_sdcc_setup_power,
 };
 #endif
-
-
 
 static void __init msm7x2x_init_mmc(void)
 {

@@ -15,11 +15,9 @@ static int delta_wifi_power_state;
 
 int delta_wifi_power(int on)
 {
-	printk(KERN_ERR "%s: %d\n", __func__, on);
 	if (on && (on == delta_wifi_power_state))
 		return 0;
 	if (on) {
-		printk(KERN_ERR "%s: turning on\n", __func__);
 		gpio_set_value(DELTA_WIFI_PMENA_GPIO, 1);
 		mdelay(15);
 		gpio_set_value(DELTA_WIFI_PMENA_GPIO, 0);
@@ -27,7 +25,6 @@ int delta_wifi_power(int on)
 		gpio_set_value(DELTA_WIFI_PMENA_GPIO, 1);
 		mdelay(70);
 	} else {
-		printk(KERN_ERR "%s: turning off\n", __func__);
 		gpio_set_value(DELTA_WIFI_PMENA_GPIO, 0);
 	}
 	delta_wifi_power_state = on;
@@ -43,7 +40,7 @@ struct wl12xx_platform_data delta_wlan_data __initdata = {
 static int __init delta_wifi_init(void)
 {
 	int ret;
-printk(KERN_ERR "%s\n", __func__);
+
 	ret = gpio_request(DELTA_WIFI_IRQ_GPIO, "wifi_irq");
 	if (ret < 0) {
 		printk(KERN_ERR "%s: can't reserve GPIO: %d\n", __func__,
