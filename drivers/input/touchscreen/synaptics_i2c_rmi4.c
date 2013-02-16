@@ -451,6 +451,7 @@ static void synaptics_2D_data_handler(struct synaptics_ts_data *ts)
 		input_report_abs(ts->input_dev, ABS_Y, f_data[0].y);
 		input_report_abs(ts->input_dev, ABS_MT_POSITION_X, f_data[0].x);
 		input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, f_data[0].y);
+		input_report_abs(ts->input_dev, ABS_MT_PRESSURE, f_data[0].z);
 	}
 	input_report_abs(ts->input_dev, ABS_PRESSURE, f_data[0].z);
 	input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, f_data[0].w);
@@ -464,6 +465,7 @@ static void synaptics_2D_data_handler(struct synaptics_ts_data *ts)
 			input_report_abs(ts->input_dev, ABS_HAT0Y, ts->yf);
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_X, ts->xf);
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, ts->yf);
+			input_report_abs(ts->input_dev, ABS_MT_PRESSURE, f_data[0].z);
 		}
 		input_report_abs(ts->input_dev, ABS_PRESSURE, f_data[0].z);
 		input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, f_data[0].w);
@@ -967,6 +969,7 @@ static int synaptics_ts_probe(
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, -1, max_y + 1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, fuzz_p, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0, 255, fuzz_w, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, 255, 0, 0);
 
 	ret = input_register_device(ts->input_dev);
 	if (ret) {

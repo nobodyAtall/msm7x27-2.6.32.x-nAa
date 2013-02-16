@@ -1,6 +1,5 @@
-/* include/linux/timed_gpio.h
- *
- * Copyright (C) 2008 Google, Inc.
+/*
+ * Copyright (C) 2010 Google, Inc.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -11,23 +10,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
-*/
+ */
 
-#ifndef _LINUX_TIMED_GPIO_H
-#define _LINUX_TIMED_GPIO_H
+#ifndef _INCLUDE_LINUX_PLATFORM_DATA_RAM_CONSOLE_H_
+#define _INCLUDE_LINUX_PLATFORM_DATA_RAM_CONSOLE_H_
 
-#define TIMED_GPIO_NAME "timed-gpio"
-
-struct timed_gpio {
-	const char *name;
-	unsigned	gpio;
-	int		max_timeout;
-	u8		active_low;
+struct ram_console_platform_data {
+	const char *bootinfo;
 };
 
-struct timed_gpio_platform_data {
-	int		num_gpios;
-	struct timed_gpio *gpios;
-};
-
-#endif
+#endif /* _INCLUDE_LINUX_PLATFORM_DATA_RAM_CONSOLE_H_ */

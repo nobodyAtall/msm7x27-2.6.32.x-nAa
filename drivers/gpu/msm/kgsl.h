@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,6 +21,7 @@
 #include <linux/mutex.h>
 #include <linux/cdev.h>
 #include <linux/regulator/consumer.h>
+#include <linux/mm.h>
 
 #define KGSL_NAME "kgsl"
 
@@ -102,7 +103,15 @@ struct kgsl_driver {
 extern struct kgsl_driver kgsl_driver;
 
 struct kgsl_pagetable;
-struct kgsl_memdesc_ops;
+struct kgsl_memdesc;
+
+struct kgsl_memdesc_ops {
+	int (*vmflags)(struct kgsl_memdesc *);
+	int (*vmfault)(struct kgsl_memdesc *, struct vm_area_struct *,
+		       struct vm_fault *);
+	void (*free)(struct kgsl_memdesc *memdesc);
+	int (*map_kernel_mem)(struct kgsl_memdesc *);
+};
 
 /* shared memory allocation */
 struct kgsl_memdesc {
@@ -130,7 +139,7 @@ struct kgsl_mem_entry {
 	struct kgsl_memdesc memdesc;
 	int memtype;
 	void *priv_data;
-	struct list_head list;
+	struct rb_node node;
 	uint32_t free_timestamp;
 	/* back pointer to private structure under whose context this
 	* allocation is made */
@@ -144,6 +153,10 @@ struct kgsl_mem_entry {
 #endif
 
 void kgsl_mem_entry_destroy(struct kref *kref);
+
+struct kgsl_mem_entry *kgsl_get_mem_entry(unsigned int ptbase,
+		unsigned int gpuaddr, unsigned int size);
+
 struct kgsl_mem_entry *kgsl_sharedmem_find_region(
 	struct kgsl_process_private *private, unsigned int gpuaddr,
 	size_t size);
@@ -180,13 +193,15 @@ static inline int kgsl_gpuaddr_in_memdesc(const struct kgsl_memdesc *memdesc,
 	}
 	return 0;
 }
-static inline uint8_t *kgsl_gpuaddr_to_vaddr(const struct kgsl_memdesc *memdesc,
+static inline uint8_t *kgsl_gpuaddr_to_vaddr(struct kgsl_memdesc *memdesc,
 					     unsigned int gpuaddr)
 {
-	if (memdesc->hostptr == NULL || memdesc->gpuaddr == 0 ||
-		(gpuaddr < memdesc->gpuaddr ||
-		gpuaddr >= memdesc->gpuaddr + memdesc->size))
-		return NULL;
+	if (memdesc->gpuaddr == 0 ||
+		gpuaddr < memdesc->gpuaddr ||
+		gpuaddr >= (memdesc->gpuaddr + memdesc->size) ||
+		(NULL == memdesc->hostptr && memdesc->ops->map_kernel_mem &&
+			memdesc->ops->map_kernel_mem(memdesc)))
+			return NULL;
 
 	return memdesc->hostptr + (gpuaddr - memdesc->gpuaddr);
 }
@@ -198,7 +213,7 @@ static inline int timestamp_cmp(unsigned int new, unsigned int old)
 	if (ts_diff == 0)
 		return 0;
 
-	return ((ts_diff > 0) || (ts_diff < -20000)) ? 1 : -1;
+	return ((ts_diff > 0) || (ts_diff < -25000)) ? 1 : -1;
 }
 
 static inline void

@@ -47,6 +47,7 @@
 #define KGSL_STATE_SUSPEND	0x00000010
 #define KGSL_STATE_HUNG		0x00000020
 #define KGSL_STATE_DUMP_AND_RECOVER	0x00000040
+#define KGSL_STATE_SLUMBER	0x00000080
 
 #define KGSL_GRAPHICS_MEMORY_LOW_WATERMARK  0x1000000
 
@@ -90,6 +91,7 @@ struct kgsl_functable {
 	void (*power_stats)(struct kgsl_device *device,
 		struct kgsl_power_stats *stats);
 	void (*irqctrl)(struct kgsl_device *device, int state);
+	unsigned int (*gpuid)(struct kgsl_device *device);
 	/* Optional functions - these functions are not mandatory.  The
 	   driver will check that the function pointer is not NULL before
 	   calling the hook */
@@ -175,6 +177,7 @@ struct kgsl_device {
 	struct kobject pwrscale_kobj;
 	struct work_struct ts_expired_ws;
 	struct list_head events;
+	s64 on_time;
 };
 
 struct kgsl_context {
@@ -185,13 +188,18 @@ struct kgsl_context {
 
 	/* Pointer to the device specific context information */
 	void *devctxt;
+	/*
+	 * Status indicating whether a gpu reset occurred and whether this
+	 * context was responsible for causing it
+	 */
+	unsigned int reset_status;
 };
 
 struct kgsl_process_private {
 	unsigned int refcnt;
 	pid_t pid;
 	spinlock_t mem_lock;
-	struct list_head mem_list;
+	struct rb_root mem_rb;
 	struct kgsl_pagetable *pagetable;
 	struct list_head list;
 	struct kobject kobj;
@@ -241,6 +249,11 @@ static inline int kgsl_idle(struct kgsl_device *device, unsigned int timeout)
 	return device->ftbl->idle(device, timeout);
 }
 
+static inline unsigned int kgsl_gpuid(struct kgsl_device *device)
+{
+	return device->ftbl->gpuid(device);
+}
+
 static inline int kgsl_create_device_sysfs_files(struct device *root,
 	struct device_attribute **list)
 {
@@ -278,10 +291,11 @@ static inline struct kgsl_device *kgsl_device_from_dev(struct device *dev)
 
 static inline int kgsl_create_device_workqueue(struct kgsl_device *device)
 {
-	device->work_queue = create_workqueue(device->name);
+	device->work_queue = create_singlethread_workqueue(device->name);
 	if (!device->work_queue) {
-		KGSL_DRV_ERR(device, "create_workqueue(%s) failed\n",
-			device->name);
+		KGSL_DRV_ERR(device,
+			     "create_singlethread_workqueue(%s) failed\n",
+			     device->name);
 		return -EINVAL;
 	}
 	return 0;

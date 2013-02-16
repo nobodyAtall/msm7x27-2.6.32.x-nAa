@@ -71,6 +71,9 @@ unsigned crci_mask;
 #define MODULE_NAME "msm_nand"
 #define PM_QOS_NO_ISAPC 10
 
+bool skip_bad_blocks = false;
+module_param(skip_bad_blocks, bool, 0600);
+
 struct msm_nand_chip {
 	struct device *dev;
 	wait_queue_head_t wait_queue;
@@ -3436,7 +3439,7 @@ msm_nand_block_isbad_singlenandc(struct mtd_info *mtd, loff_t ofs)
 	if (dma_buffer->data.result.flash_status & 0x110)
 		ret = -EIO;
 
-	if (!ret) {
+	if (!ret && !skip_bad_blocks) {
 		/* Check for bad block marker byte */
 		if (chip->CFG1 & CFG1_WIDE_FLASH) {
 			if (buf[0] != 0xFF || buf[1] != 0xFF)
