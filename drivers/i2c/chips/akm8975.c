@@ -587,7 +587,7 @@ static int akm8975_init_client(struct i2c_client *client)
  err_free_gpio:
   gpio_free(ECS_INTR);
  err_free_irq:
-//  free_irq(client->irq, 0);
+  free_irq(client->irq, 0);
 // err_alloc_data_failed:
  err:
   return ret;
