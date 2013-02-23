@@ -33,7 +33,11 @@ int delta_wifi_power(int on)
 
 struct wl12xx_platform_data delta_wlan_data __initdata = {
 	.irq = MSM_GPIO_TO_INT(DELTA_WIFI_IRQ_GPIO),
+#ifdef CONFIG_MACH_MSM7X27_SHAKIRA
 	.board_ref_clock = WL12XX_REFCLOCK_19,
+#else
+	.board_ref_clock = WL12XX_REFCLOCK_38_XTAL,
+#endif
 	.platform_quirks = WL12XX_PLATFORM_QUIRK_EDGE_IRQ,
 };
 
