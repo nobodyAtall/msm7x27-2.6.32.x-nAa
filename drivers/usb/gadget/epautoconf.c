@@ -148,7 +148,7 @@ ep_matches (
 			return 0;
 
 		/* BOTH:  "high bandwidth" works only at high speed */
-		if ((desc->wMaxPacketSize & __constant_cpu_to_le16(3<<11))) {
+		if ((desc->wMaxPacketSize & cpu_to_le16(3<<11))) {
 			if (!gadget->is_dualspeed)
 				return 0;
 			/* configure your hardware with enough buffering!! */
@@ -302,6 +302,7 @@ void usb_ep_autoconfig_reset(struct usb_gadget *gadget)
 
 	list_for_each_entry (ep, &gadget->ep_list, ep_list) {
 		ep->driver_data = NULL;
+		ep->maxpacket = 512;
 	}
 #ifdef	MANY_ENDPOINTS
 	in_epnum = 0;

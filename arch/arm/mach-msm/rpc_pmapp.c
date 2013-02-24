@@ -1,57 +1,18 @@
-/* Copyright (c) 2009, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of Code Aurora Forum nor
- *       the names of its contributors may be used to endorse or promote
- *       products derived from this software without specific prior written
- *       permission.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
  *
- * Alternatively, provided that this notice is retained in full, this software
- * may be relicensed by the recipient under the terms of the GNU General Public
- * License version 2 ("GPL") and only version 2, in which case the provisions of
- * the GPL apply INSTEAD OF those given above.  If the recipient relicenses the
- * software under the GPL, then the identification text in the MODULE_LICENSE
- * macro must be changed to reflect "GPLv2" instead of "Dual BSD/GPL".  Once a
- * recipient changes the license terms to the GPL, subsequent recipients shall
- * not relicense under alternate licensing terms, including the BSD or dual
- * BSD/GPL terms.  In addition, the following license statement immediately
- * below and between the words START and END shall also then apply when this
- * software is relicensed under the GPL:
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * START
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License version 2 and only version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
- *
- * END
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
  *
  */
 
@@ -62,14 +23,28 @@
 #include <mach/msm_rpcrouter.h>
 #include <mach/vreg.h>
 
-#define PM_APP_USB_PROG				0x30000060
-#define PM_APP_USB_VERS_1_1			0x00010001
-#define PM_APP_USB_VERS_1_2			0x00010002
-#define PM_APP_USB_VERS_2_1			0x00020001
+#define PMAPP_RPC_PROG			0x30000060
+#define PMAPP_RPC_VER_1_1		0x00010001
+#define PMAPP_RPC_VER_1_2		0x00010002
+#define PMAPP_RPC_VER_2_1		0x00020001
+#define PMAPP_RPC_VER_3_1		0x00030001
+#define PMAPP_RPC_VER_5_1		0x00050001
 
 #define VBUS_SESS_VALID_CB_PROC			1
 #define PM_VOTE_USB_PWR_SEL_SWITCH_APP__HSUSB 	(1 << 2)
 #define PM_USB_PWR_SEL_SWITCH_ID 		0
+
+#define PMAPP_RPC_TIMEOUT (5*HZ)
+
+#define PMAPP_DISPLAY_CLOCK_CONFIG_PROC		21
+#define PMAPP_VREG_LEVEL_VOTE_PROC		23
+#define PMAPP_SMPS_CLOCK_VOTE_PROC		26
+#define PMAPP_CLOCK_VOTE_PROC			27
+#define PMAPP_SMPS_MODE_VOTE_PROC		28
+#define PMAPP_VREG_PINCNTRL_VOTE_PROC		30
+
+/* Clock voter name max length */
+#define PMAPP_CLOCK_VOTER_ID_LEN		4
 
 struct rpc_pmapp_ids {
 	unsigned long	reg_for_vbus_valid;
@@ -77,19 +52,17 @@ struct rpc_pmapp_ids {
 };
 
 static struct rpc_pmapp_ids rpc_ids;
-static struct vreg *boost_vreg, *usb_vreg;
 static struct msm_rpc_client *client;
-static int ldo_on;
 
 static void rpc_pmapp_init_rpc_ids(unsigned long vers)
 {
-	if (vers == PM_APP_USB_VERS_1_1) {
+	if (vers == PMAPP_RPC_VER_1_1) {
 		rpc_ids.reg_for_vbus_valid		= 5;
 		rpc_ids.vote_for_vbus_valid_switch	= 6;
-	} else if (vers == PM_APP_USB_VERS_1_2) {
+	} else if (vers == PMAPP_RPC_VER_1_2) {
 		rpc_ids.reg_for_vbus_valid		= 16;
 		rpc_ids.vote_for_vbus_valid_switch	= 17;
-	} else if (vers == PM_APP_USB_VERS_2_1) {
+	} else if (vers == PMAPP_RPC_VER_2_1) {
 		rpc_ids.reg_for_vbus_valid		= 0; /* NA */
 		rpc_ids.vote_for_vbus_valid_switch	= 0; /* NA */
 	}
@@ -133,70 +106,16 @@ static int vbus_sess_valid_arg_cb(struct msm_rpc_client *client,
 	return sizeof(struct vbus_sess_valid_args);
 }
 
-int msm_pm_app_register_vbus_sn(void (*callback)(int online))
-{
-	uint32_t cb_id = msm_rpc_add_cb_func(client, (void *)callback);
 
-	/* In case of NULL callback funtion, cb_id would be -1 */
-	if ((int) cb_id < -1)
-		return cb_id;
-
-	return msm_rpc_client_req(client,
-			rpc_ids.reg_for_vbus_valid,
-			vbus_sess_valid_arg_cb,
-			&cb_id, NULL, NULL, -1);
-
-}
-EXPORT_SYMBOL(msm_pm_app_register_vbus_sn);
-
-void msm_pm_app_unregister_vbus_sn(void (*callback)(int online))
-{
-	msm_rpc_remove_cb_func(client, (void *)callback);
-}
-EXPORT_SYMBOL(msm_pm_app_unregister_vbus_sn);
-
-int msm_pm_app_enable_usb_ldo(int enable)
+int pmic_vote_3p3_pwr_sel_switch(int boost)
 {
 	int ret;
 
-	if (ldo_on == enable)
-		return 0;
-	ldo_on = enable;
+	ret = msm_pm_app_vote_usb_pwr_sel_switch(boost);
 
-	if (enable) {
-		/* vote to turn ON Boost Vreg_5V */
-		ret = vreg_enable(boost_vreg);
-		if (ret < 0)
-			return ret;
-		/* vote to switch it to VREG_5V source */
-		ret = msm_pm_app_vote_usb_pwr_sel_switch(1);
-		if (ret < 0) {
-			vreg_disable(boost_vreg);
-			return ret;
-		}
-		ret = vreg_enable(usb_vreg);
-		if (ret < 0) {
-			msm_pm_app_vote_usb_pwr_sel_switch(0);
-			vreg_disable(boost_vreg);
-			return ret;
-		}
-
-	} else {
-		ret = vreg_disable(usb_vreg);
-		if (ret < 0)
-			return ret;
-		ret = vreg_disable(boost_vreg);
-		if (ret < 0)
-			return ret;
-		/* vote to switch it to VBUS source */
-		ret = msm_pm_app_vote_usb_pwr_sel_switch(0);
-		if (ret < 0)
-			return ret;
-	}
-
-	return 0;
+	return ret;
 }
-EXPORT_SYMBOL(msm_pm_app_enable_usb_ldo);
+EXPORT_SYMBOL(pmic_vote_3p3_pwr_sel_switch);
 
 struct vbus_sn_notification_args {
 	uint32_t cb_id;
@@ -257,80 +176,62 @@ static int pm_app_usb_cb_func(struct msm_rpc_client *client,
 	return rc;
 }
 
-int msm_pm_app_rpc_init(void)
+int msm_pm_app_rpc_init(void (*callback)(int online))
 {
+	uint32_t cb_id, rc;
 
 	if (!machine_is_qsd8x50_ffa() && !machine_is_qsd8x50a_ffa()
 			&& !machine_is_msm7x27_ffa())
 		return -ENOTSUPP;
 
-	boost_vreg = vreg_get(NULL, "boost");
-	if (IS_ERR(boost_vreg)) {
-		pr_err("%s: boost vreg get failed\n", __func__);
-		return PTR_ERR(boost_vreg);
-	}
-
-	usb_vreg = vreg_get(NULL, "usb");
-	if (IS_ERR(usb_vreg)) {
-		pr_err("%s: usb vreg get failed\n", __func__);
-		vreg_put(usb_vreg);
-		return PTR_ERR(usb_vreg);
-	}
-
 	client = msm_rpc_register_client("pmapp_usb",
-			PM_APP_USB_PROG,
-			PM_APP_USB_VERS_2_1, 1,
+			PMAPP_RPC_PROG,
+			PMAPP_RPC_VER_2_1, 1,
 			pm_app_usb_cb_func);
 	if (!IS_ERR(client)) {
-		rpc_pmapp_init_rpc_ids(PM_APP_USB_VERS_2_1);
+		rpc_pmapp_init_rpc_ids(PMAPP_RPC_VER_2_1);
 		goto done;
 	}
 
 	client = msm_rpc_register_client("pmapp_usb",
-			PM_APP_USB_PROG,
-			PM_APP_USB_VERS_1_2, 1,
+			PMAPP_RPC_PROG,
+			PMAPP_RPC_VER_1_2, 1,
 			pm_app_usb_cb_func);
 	if (!IS_ERR(client)) {
-		rpc_pmapp_init_rpc_ids(PM_APP_USB_VERS_1_2);
+		rpc_pmapp_init_rpc_ids(PMAPP_RPC_VER_1_2);
 		goto done;
 	}
 
 	client = msm_rpc_register_client("pmapp_usb",
-			PM_APP_USB_PROG,
-			PM_APP_USB_VERS_1_1, 1,
+			PMAPP_RPC_PROG,
+			PMAPP_RPC_VER_1_1, 1,
 			pm_app_usb_cb_func);
 	if (!IS_ERR(client))
-		rpc_pmapp_init_rpc_ids(PM_APP_USB_VERS_1_1);
+		rpc_pmapp_init_rpc_ids(PMAPP_RPC_VER_1_1);
 	else
 		return PTR_ERR(client);
 
 done:
-	return 0;
+	cb_id = msm_rpc_add_cb_func(client, (void *)callback);
+	/* In case of NULL callback funtion, cb_id would be -1 */
+	if ((int) cb_id < -1)
+		return cb_id;
+	rc =  msm_rpc_client_req(client,
+		rpc_ids.reg_for_vbus_valid,
+			vbus_sess_valid_arg_cb,
+				&cb_id, NULL, NULL, -1);
+	return rc;
 }
 EXPORT_SYMBOL(msm_pm_app_rpc_init);
 
-void msm_pm_app_rpc_deinit(void)
+void msm_pm_app_rpc_deinit(void(*callback)(int online))
 {
 	if (client) {
+		msm_rpc_remove_cb_func(client, (void *)callback);
 		msm_rpc_unregister_client(client);
-		msm_pm_app_enable_usb_ldo(0);
-		vreg_put(boost_vreg);
-		vreg_put(usb_vreg);
 	}
 }
 EXPORT_SYMBOL(msm_pm_app_rpc_deinit);
-
-#define PMAPP_RPC_TIMEOUT (5*HZ)
-
-#define PMAPP_RPC_PROG		0x30000060
-#define PMAPP_RPC_VER_2_1	0x00020001
-#define PMAPP_RPC_VER_3_1	0x00030001
-
-#define PMAPP_DISPLAY_CLOCK_CONFIG_PROC		21
-#define PMAPP_CLOCK_VOTE_PROC			27
-
-/* Clock voter name max length */
-#define PMAPP_CLOCK_VOTER_ID_LEN		4
 
 /* error bit flags defined by modem side */
 #define PM_ERR_FLAG__PAR1_OUT_OF_RANGE		(0x0001)
@@ -476,7 +377,11 @@ static int pmapp_rpc_req_reply(struct pmapp_buf *tbuf, struct pmapp_buf *rbuf,
 
 	if ((pm->endpoint == NULL) || IS_ERR(pm->endpoint)) {
 		pm->endpoint = msm_rpc_connect_compatible(PMAPP_RPC_PROG,
-					PMAPP_RPC_VER_3_1, 0);
+					PMAPP_RPC_VER_5_1, 0);
+		if (IS_ERR(pm->endpoint)) {
+			pm->endpoint = msm_rpc_connect_compatible(
+				PMAPP_RPC_PROG, PMAPP_RPC_VER_3_1, 0);
+		}
 		if (IS_ERR(pm->endpoint)) {
 			pm->endpoint = msm_rpc_connect_compatible(
 				PMAPP_RPC_PROG, PMAPP_RPC_VER_2_1, 0);
@@ -583,3 +488,45 @@ int pmapp_clock_vote(const char *voter_id, uint clock_id, uint vote)
 			PMAPP_CLOCK_VOTE_PROC);
 }
 EXPORT_SYMBOL(pmapp_clock_vote);
+
+int pmapp_smps_clock_vote(const char *voter_id, uint vreg_id, uint vote)
+{
+	if (strlen(voter_id) != PMAPP_CLOCK_VOTER_ID_LEN)
+		return -EINVAL;
+
+	return pmapp_rpc_set_only(*((uint *) voter_id), vreg_id, vote, 0, 3,
+				  PMAPP_SMPS_CLOCK_VOTE_PROC);
+}
+EXPORT_SYMBOL(pmapp_smps_clock_vote);
+
+int pmapp_vreg_level_vote(const char *voter_id, uint vreg_id, uint level)
+{
+	if (strlen(voter_id) != PMAPP_CLOCK_VOTER_ID_LEN)
+		return -EINVAL;
+
+	return pmapp_rpc_set_only(*((uint *) voter_id), vreg_id, level, 0, 3,
+				  PMAPP_VREG_LEVEL_VOTE_PROC);
+}
+EXPORT_SYMBOL(pmapp_vreg_level_vote);
+
+int pmapp_smps_mode_vote(const char *voter_id, uint vreg_id, uint mode)
+{
+	if (strlen(voter_id) != PMAPP_CLOCK_VOTER_ID_LEN)
+		return -EINVAL;
+
+	return pmapp_rpc_set_only(*((uint *) voter_id), vreg_id, mode, 0, 3,
+				  PMAPP_SMPS_MODE_VOTE_PROC);
+}
+EXPORT_SYMBOL(pmapp_smps_mode_vote);
+
+int pmapp_vreg_pincntrl_vote(const char *voter_id, uint vreg_id,
+						uint clock_id, uint vote)
+{
+	if (strlen(voter_id) != PMAPP_CLOCK_VOTER_ID_LEN)
+		return -EINVAL;
+
+	return pmapp_rpc_set_only(*((uint *) voter_id), vreg_id, clock_id,
+					vote, 4,
+					PMAPP_VREG_PINCNTRL_VOTE_PROC);
+}
+EXPORT_SYMBOL(pmapp_vreg_pincntrl_vote);

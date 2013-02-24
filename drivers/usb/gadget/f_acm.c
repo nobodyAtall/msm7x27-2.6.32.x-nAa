@@ -19,16 +19,6 @@
 #include "u_serial.h"
 #include "gadget_chips.h"
 
-#define DBG(d, fmt, args...) \
-	dev_dbg(&(d)->gadget->dev , fmt , ## args)
-#define VDBG(d, fmt, args...) \
-	dev_vdbg(&(d)->gadget->dev , fmt , ## args)
-#define ERROR(d, fmt, args...) \
-	dev_err(&(d)->gadget->dev , fmt , ## args)
-#define WARNING(d, fmt, args...) \
-	dev_warn(&(d)->gadget->dev , fmt , ## args)
-#define INFO(d, fmt, args...) \
-	dev_info(&(d)->gadget->dev , fmt , ## args)
 
 /*
  * This CDC ACM function support just wraps control functions and
@@ -112,7 +102,7 @@ static inline struct f_acm *port_to_acm(struct gserial *p)
 /* interface and class descriptors: */
 
 struct usb_interface_assoc_descriptor acm_interface_assoc_desc = {
-	.bLength           = USB_DT_INTERFACE_ASSOCIATION_SIZE,
+	.bLength           = 8,
 	.bDescriptorType   = USB_DT_INTERFACE_ASSOCIATION,
 	.bInterfaceCount   = 2,
 	.bFunctionClass    = USB_CLASS_COMM,
@@ -145,7 +135,7 @@ static struct usb_cdc_header_desc acm_header_desc  = {
 	.bLength =		sizeof(acm_header_desc),
 	.bDescriptorType =	USB_DT_CS_INTERFACE,
 	.bDescriptorSubType =	USB_CDC_HEADER_TYPE,
-	.bcdCDC =		__constant_cpu_to_le16(0x0110),
+	.bcdCDC =		cpu_to_le16(0x0110),
 };
 
 static struct usb_cdc_call_mgmt_descriptor
@@ -179,7 +169,7 @@ static struct usb_endpoint_descriptor acm_fs_notify_desc  = {
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bEndpointAddress =	USB_DIR_IN,
 	.bmAttributes =		USB_ENDPOINT_XFER_INT,
-	.wMaxPacketSize =	__constant_cpu_to_le16(GS_NOTIFY_MAXPACKET),
+	.wMaxPacketSize =	cpu_to_le16(GS_NOTIFY_MAXPACKET),
 	.bInterval =		1 << GS_LOG2_NOTIFY_INTERVAL,
 };
 
@@ -218,7 +208,7 @@ static struct usb_endpoint_descriptor acm_hs_notify_desc  = {
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bEndpointAddress =	USB_DIR_IN,
 	.bmAttributes =		USB_ENDPOINT_XFER_INT,
-	.wMaxPacketSize =	__constant_cpu_to_le16(GS_NOTIFY_MAXPACKET),
+	.wMaxPacketSize =	cpu_to_le16(GS_NOTIFY_MAXPACKET),
 	.bInterval =		GS_LOG2_NOTIFY_INTERVAL+4,
 };
 
@@ -226,14 +216,14 @@ static struct usb_endpoint_descriptor acm_hs_in_desc  = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize =	__constant_cpu_to_le16(512),
+	.wMaxPacketSize =	cpu_to_le16(512),
 };
 
 static struct usb_endpoint_descriptor acm_hs_out_desc  = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize =	__constant_cpu_to_le16(512),
+	.wMaxPacketSize =	cpu_to_le16(512),
 };
 
 static struct usb_descriptor_header *acm_hs_function[]  = {

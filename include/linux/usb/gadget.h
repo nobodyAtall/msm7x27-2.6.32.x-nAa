@@ -450,6 +450,7 @@ struct usb_gadget_ops {
  *	only supports HNP on a different root port.
  * @b_hnp_enable: OTG device feature flag, indicating that the A-Host
  *	enabled HNP support.
+ * @host_request: A flag set by user when wishes to take up host role.
  * @name: Identifies the controller hardware type.  Used in diagnostics
  *	and sometimes configuration.
  * @dev: Driver model state for this abstract device.
@@ -484,6 +485,7 @@ struct usb_gadget {
 	unsigned			b_hnp_enable:1;
 	unsigned			a_hnp_support:1;
 	unsigned			a_alt_hnp_support:1;
+	unsigned			host_request:1;
 	const char			*name;
 	struct device			dev;
 };
@@ -492,6 +494,10 @@ static inline void set_gadget_data(struct usb_gadget *gadget, void *data)
 	{ dev_set_drvdata(&gadget->dev, data); }
 static inline void *get_gadget_data(struct usb_gadget *gadget)
 	{ return dev_get_drvdata(&gadget->dev); }
+static inline struct usb_gadget *dev_to_usb_gadget(struct device *dev)
+{
+	return container_of(dev, struct usb_gadget, dev);
+}
 
 /* iterates the non-control endpoints; 'tmp' is a struct usb_ep pointer */
 #define gadget_for_each_ep(tmp,gadget) \
@@ -598,6 +604,7 @@ static inline int usb_gadget_clear_selfpowered(struct usb_gadget *gadget)
 /**
  * usb_gadget_vbus_connect - Notify controller that VBUS is powered
  * @gadget:The device which now has VBUS power.
+ * Context: can sleep
  *
  * This call is used by a driver for an external transceiver (or GPIO)
  * that detects a VBUS power session starting.  Common responses include
@@ -636,6 +643,7 @@ static inline int usb_gadget_vbus_draw(struct usb_gadget *gadget, unsigned mA)
 /**
  * usb_gadget_vbus_disconnect - notify controller about VBUS session end
  * @gadget:the device whose VBUS supply is being described
+ * Context: can sleep
  *
  * This call is used by a driver for an external transceiver (or GPIO)
  * that detects a VBUS power session ending.  Common responses include
@@ -771,17 +779,12 @@ struct usb_gadget_driver {
 	int			(*setup)(struct usb_gadget *,
 					const struct usb_ctrlrequest *);
 	void			(*disconnect)(struct usb_gadget *);
-	void			(*offline)(struct usb_gadget *);
 	void			(*suspend)(struct usb_gadget *);
 	void			(*resume)(struct usb_gadget *);
 
 	/* FIXME support safe rmmod */
 	struct device_driver	driver;
 };
-
-
-
-/*-------------------------------------------------------------------------*/
 
 /* driver modules register and unregister, as usual.
  * these calls must be made in a context that can sleep.
@@ -793,19 +796,20 @@ struct usb_gadget_driver {
 /**
  * usb_gadget_register_driver - register a gadget driver
  * @driver:the driver being registered
+ * Context: can sleep
  *
  * Call this in your gadget driver's module initialization function,
  * to tell the underlying usb controller driver about your driver.
  * The driver's bind() function will be called to bind it to a
  * gadget before this registration call returns.  It's expected that
  * the bind() functions will be in init sections.
- * This function must be called in a context that can sleep.
  */
 int usb_gadget_register_driver(struct usb_gadget_driver *driver);
 
 /**
  * usb_gadget_unregister_driver - unregister a gadget driver
  * @driver:the driver being unregistered
+ * Context: can sleep
  *
  * Call this in your gadget driver's module cleanup function,
  * to tell the underlying usb controller that your driver is
@@ -814,7 +818,6 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver);
  * to unbind() and clean up any device state, before this procedure
  * finally returns.  It's expected that the unbind() functions
  * will in in exit sections, so may not be linked in some kernels.
- * This function must be called in a context that can sleep.
  */
 int usb_gadget_unregister_driver(struct usb_gadget_driver *driver);
 

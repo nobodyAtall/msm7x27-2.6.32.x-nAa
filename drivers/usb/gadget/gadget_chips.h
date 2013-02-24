@@ -137,6 +137,12 @@
 #define gadget_is_musbhdrc(g)	0
 #endif
 
+#ifdef CONFIG_USB_GADGET_LANGWELL
+#define gadget_is_langwell(g)	(!strcmp("langwell_udc", (g)->name))
+#else
+#define gadget_is_langwell(g)	0
+#endif
+
 /* from Montavista kernel (?) */
 #ifdef CONFIG_USB_GADGET_MPC8272
 #define gadget_is_mpc8272(g)	!strcmp("mpc8272_udc", (g)->name)
@@ -172,6 +178,12 @@
 // CONFIG_USB_GADGET_SX2
 // CONFIG_USB_GADGET_AU1X00
 // ...
+
+#ifdef CONFIG_USB_GADGET_R8A66597
+#define	gadget_is_r8a66597(g)	!strcmp("r8a66597_udc", (g)->name)
+#else
+#define	gadget_is_r8a66597(g)	0
+#endif
 
 
 /**
@@ -237,8 +249,12 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
 		return 0x22;
 	else if (gadget_is_ci13xxx(gadget))
 		return 0x23;
-	else if (gadget_is_msm72k(gadget))
+	else if (gadget_is_langwell(gadget))
 		return 0x24;
+	else if (gadget_is_r8a66597(gadget))
+		return 0x25;
+	else if (gadget_is_msm72k(gadget))
+		return 0x26;
 	return -ENOENT;
 }
 

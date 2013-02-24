@@ -1,9 +1,10 @@
-/*
- * Gadget Driver for Android ADB
+/* drivers/usb/gadget/f_diag.h
  *
- * Copyright (C) 2008 Google, Inc.
- * Author: Mike Lockwood <lockwood@android.com>
+ * Diag Function Device - Route DIAG frames between SMD and USB
  *
+ * Copyright (C) 2008-2009 Google, Inc.
+ * Copyright (c) 2009, Code Aurora Forum. All rights reserved.
+ * Author: Brian Swetland <swetland@google.com>
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -14,14 +15,10 @@
  * GNU General Public License for more details.
  *
  */
+#ifndef __F_DIAG_H
+#define __F_DIAG_H
 
-#ifndef __F_ADB_H
-#define __F_ADB_H
+int diag_function_add(struct usb_configuration *c, const char *);
 
-int adb_function_init(void);
-int adb_function_add(struct usb_composite_dev *cdev,
-	struct usb_configuration *c);
-void adb_function_enable(int enable);
-void adb_function_exit(void);
+#endif /* __F_DIAG_H */
 
-#endif /* __F_ADB_H */

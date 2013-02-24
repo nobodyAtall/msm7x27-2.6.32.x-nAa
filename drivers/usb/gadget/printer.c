@@ -130,31 +130,31 @@ static struct printer_dev usb_printer_gadget;
  * parameters are in UTF-8 (superset of ASCII's 7 bit characters).
  */
 
-static ushort idVendor;
+static ushort __initdata idVendor;
 module_param(idVendor, ushort, S_IRUGO);
 MODULE_PARM_DESC(idVendor, "USB Vendor ID");
 
-static ushort idProduct;
+static ushort __initdata idProduct;
 module_param(idProduct, ushort, S_IRUGO);
 MODULE_PARM_DESC(idProduct, "USB Product ID");
 
-static ushort bcdDevice;
+static ushort __initdata bcdDevice;
 module_param(bcdDevice, ushort, S_IRUGO);
 MODULE_PARM_DESC(bcdDevice, "USB Device version (BCD)");
 
-static char *iManufacturer;
+static char *__initdata iManufacturer;
 module_param(iManufacturer, charp, S_IRUGO);
 MODULE_PARM_DESC(iManufacturer, "USB Manufacturer string");
 
-static char *iProduct;
+static char *__initdata iProduct;
 module_param(iProduct, charp, S_IRUGO);
 MODULE_PARM_DESC(iProduct, "USB Product string");
 
-static char *iSerialNum;
+static char *__initdata iSerialNum;
 module_param(iSerialNum, charp, S_IRUGO);
 MODULE_PARM_DESC(iSerialNum, "1");
 
-static char *iPNPstring;
+static char *__initdata iPNPstring;
 module_param(iPNPstring, charp, S_IRUGO);
 MODULE_PARM_DESC(iPNPstring, "MFG:linux;MDL:g_printer;CLS:PRINTER;SN:1;");
 
@@ -225,12 +225,12 @@ module_param(qlen, uint, S_IRUGO|S_IWUSR);
 static struct usb_device_descriptor device_desc = {
 	.bLength =		sizeof device_desc,
 	.bDescriptorType =	USB_DT_DEVICE,
-	.bcdUSB =		__constant_cpu_to_le16(0x0200),
+	.bcdUSB =		cpu_to_le16(0x0200),
 	.bDeviceClass =		USB_CLASS_PER_INTERFACE,
 	.bDeviceSubClass =	0,
 	.bDeviceProtocol =	0,
-	.idVendor =		__constant_cpu_to_le16(PRINTER_VENDOR_NUM),
-	.idProduct =		__constant_cpu_to_le16(PRINTER_PRODUCT_NUM),
+	.idVendor =		cpu_to_le16(PRINTER_VENDOR_NUM),
+	.idProduct =		cpu_to_le16(PRINTER_PRODUCT_NUM),
 	.iManufacturer =	STRING_MANUFACTURER,
 	.iProduct =		STRING_PRODUCT,
 	.iSerialNumber =	STRING_SERIALNUM,
@@ -299,20 +299,20 @@ static struct usb_endpoint_descriptor hs_ep_in_desc = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize =	__constant_cpu_to_le16(512)
+	.wMaxPacketSize =	cpu_to_le16(512)
 };
 
 static struct usb_endpoint_descriptor hs_ep_out_desc = {
 	.bLength =		USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
 	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize =	__constant_cpu_to_le16(512)
+	.wMaxPacketSize =	cpu_to_le16(512)
 };
 
 static struct usb_qualifier_descriptor dev_qualifier = {
 	.bLength =		sizeof dev_qualifier,
 	.bDescriptorType =	USB_DT_DEVICE_QUALIFIER,
-	.bcdUSB =		__constant_cpu_to_le16(0x0200),
+	.bcdUSB =		cpu_to_le16(0x0200),
 	.bDeviceClass =		USB_CLASS_PRINTER,
 	.bNumConfigurations =	1
 };
@@ -875,7 +875,7 @@ printer_ioctl(struct file *fd, unsigned int code, unsigned long arg)
 }
 
 /* used after endpoint configuration */
-static struct file_operations printer_io_operations = {
+static const struct file_operations printer_io_operations = {
 	.owner =	THIS_MODULE,
 	.open =		printer_open,
 	.read =		printer_read,
@@ -1406,16 +1406,16 @@ printer_bind(struct usb_gadget *gadget)
 			gadget->name);
 		/* unrecognized, but safe unless bulk is REALLY quirky */
 		device_desc.bcdDevice =
-			__constant_cpu_to_le16(0xFFFF);
+			cpu_to_le16(0xFFFF);
 	}
 	snprintf(manufacturer, sizeof(manufacturer), "%s %s with %s",
 		init_utsname()->sysname, init_utsname()->release,
 		gadget->name);
 
 	device_desc.idVendor =
-		__constant_cpu_to_le16(PRINTER_VENDOR_NUM);
+		cpu_to_le16(PRINTER_VENDOR_NUM);
 	device_desc.idProduct =
-		__constant_cpu_to_le16(PRINTER_PRODUCT_NUM);
+		cpu_to_le16(PRINTER_PRODUCT_NUM);
 
 	/* support optional vendor/distro customization */
 	if (idVendor) {

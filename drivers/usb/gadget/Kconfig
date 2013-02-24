@@ -145,7 +145,7 @@ choice
 
 config USB_GADGET_AT91
 	boolean "Atmel AT91 USB Device Port"
-	depends on ARCH_AT91 && !ARCH_AT91SAM9RL && !ARCH_AT91CAP9
+	depends on ARCH_AT91 && !ARCH_AT91SAM9RL && !ARCH_AT91CAP9 && !ARCH_AT91SAM9G45
 	select USB_GADGET_SELECTED
 	help
 	   Many Atmel AT91 processors (such as the AT91RM2000) have a
@@ -164,7 +164,7 @@ config USB_AT91
 config USB_GADGET_ATMEL_USBA
 	boolean "Atmel USBA"
 	select USB_GADGET_DUALSPEED
-	depends on AVR32 || ARCH_AT91CAP9 || ARCH_AT91SAM9RL
+	depends on AVR32 || ARCH_AT91CAP9 || ARCH_AT91SAM9RL || ARCH_AT91SAM9G45
 	help
 	  USBA is the integrated high-speed USB Device controller on
 	  the AT32AP700x, some AT91SAM9 and AT91CAP9 processors from Atmel.
@@ -177,7 +177,7 @@ config USB_ATMEL_USBA
 
 config USB_GADGET_FSL_USB2
 	boolean "Freescale Highspeed USB DR Peripheral Controller"
-	depends on FSL_SOC
+	depends on FSL_SOC || ARCH_MXC
 	select USB_GADGET_DUALSPEED
 	help
 	   Some of Freescale PowerPC processors have a High Speed
@@ -244,6 +244,7 @@ config USB_OTG
 config USB_GADGET_PXA25X
 	boolean "PXA 25x or IXP 4xx"
 	depends on (ARCH_PXA && PXA25x) || ARCH_IXP4XX
+	select USB_OTG_UTILS
 	help
 	   Intel's PXA 25x series XScale ARM-5TE processors include
 	   an integrated full speed USB 1.1 device controller.  The
@@ -272,9 +273,28 @@ config USB_PXA25X_SMALL
 	default y if USB_ETH
 	default y if USB_G_SERIAL
 
+config USB_GADGET_R8A66597
+	boolean "Renesas R8A66597 USB Peripheral Controller"
+	select USB_GADGET_DUALSPEED
+	help
+	   R8A66597 is a discrete USB host and peripheral controller chip that
+	   supports both full and high speed USB 2.0 data transfers.
+	   It has nine configurable endpoints, and endpoint zero.
+
+	   Say "y" to link the driver statically, or "m" to build a
+	   dynamically linked module called "r8a66597_udc" and force all
+	   gadget drivers to also be dynamically linked.
+
+config USB_R8A66597
+	tristate
+	depends on USB_GADGET_R8A66597
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+
 config USB_GADGET_PXA27X
 	boolean "PXA 27x"
-	depends on ARCH_PXA && PXA27x
+	depends on ARCH_PXA && (PXA27x || PXA3xx)
+	select USB_OTG_UTILS
 	help
 	   Intel's PXA 27x series XScale ARM v5TE processors include
 	   an integrated full speed USB 1.1 device controller.
@@ -289,6 +309,41 @@ config USB_GADGET_PXA27X
 config USB_PXA27X
 	tristate
 	depends on USB_GADGET_PXA27X
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+
+config USB_GADGET_S3C_HSOTG
+	boolean "S3C HS/OtG USB Device controller"
+	depends on S3C_DEV_USB_HSOTG
+	select USB_GADGET_S3C_HSOTG_PIO
+	help
+	  The Samsung S3C64XX USB2.0 high-speed gadget controller
+	  integrated into the S3C64XX series SoC.
+
+config USB_S3C_HSOTG
+	tristate
+	depends on USB_GADGET_S3C_HSOTG
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+
+config USB_GADGET_IMX
+	boolean "Freescale IMX USB Peripheral Controller"
+	depends on ARCH_MX1
+	help
+	   Freescale's IMX series include an integrated full speed
+	   USB 1.1 device controller.  The controller in the IMX series
+	   is register-compatible.
+
+	   It has Six fixed-function endpoints, as well as endpoint
+	   zero (for control transfers).
+
+	   Say "y" to link the driver statically, or "m" to build a
+	   dynamically linked module called "imx_udc" and force all
+	   gadget drivers to also be dynamically linked.
+
+config USB_IMX
+	tristate
+	depends on USB_GADGET_IMX
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
@@ -327,27 +382,6 @@ config USB_GADGET_MUSB_HDRC
 	  This OTG-capable silicon IP is used in dual designs including
 	  the TI DaVinci, OMAP 243x, OMAP 343x, TUSB 6010, and ADI Blackfin
 
-config USB_GADGET_IMX
-	boolean "Freescale IMX USB Peripheral Controller"
-	depends on ARCH_MX1
-	help
-	   Freescale's IMX series include an integrated full speed
-	   USB 1.1 device controller.  The controller in the IMX series
-	   is register-compatible.
-
-	   It has Six fixed-function endpoints, as well as endpoint
-	   zero (for control transfers).
-
-	   Say "y" to link the driver statically, or "m" to build a
-	   dynamically linked module called "imx_udc" and force all
-	   gadget drivers to also be dynamically linked.
-
-config USB_IMX
-	tristate
-	depends on USB_GADGET_IMX
-	default USB_GADGET
-	select USB_GADGET_SELECTED
-
 config USB_GADGET_M66592
 	boolean "Renesas M66592 USB Peripheral Controller"
 	select USB_GADGET_DUALSPEED
@@ -365,16 +399,6 @@ config USB_M66592
 	depends on USB_GADGET_M66592
 	default USB_GADGET
 	select USB_GADGET_SELECTED
-
-config SUPERH_BUILT_IN_M66592
-	boolean "Enable SuperH built-in USB like the M66592"
-	depends on USB_GADGET_M66592 && CPU_SUBTYPE_SH7722
-	help
-	   SH7722 has USB like the M66592.
-
-	   The transfer rate is very slow when use "Ethernet Gadget".
-	   However, this problem is improved if change a value of
-	   NET_IP_ALIGN to 4.
 
 #
 # Controllers available only in discrete form (and all PCI controllers)
@@ -412,7 +436,7 @@ config USB_GADGET_FSL_QE
 	   controllers having QE or CPM2, given minor tweaks.
 
 	   Set CONFIG_USB_GADGET to "m" to build this driver as a
-	   dynmically linked module called "fsl_qe_udc".
+	   dynamically linked module called "fsl_qe_udc".
 
 config USB_FSL_QE
 	tristate
@@ -480,6 +504,27 @@ config USB_GOKU
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
+config USB_GADGET_LANGWELL
+	boolean "Intel Langwell USB Device Controller"
+	depends on PCI
+	select USB_GADGET_DUALSPEED
+	help
+	   Intel Langwell USB Device Controller is a High-Speed USB
+	   On-The-Go device controller.
+
+	   The number of programmable endpoints is different through
+	   controller revision.
+
+	   Say "y" to link the driver statically, or "m" to build a
+	   dynamically linked module called "langwell_udc" and force all
+	   gadget drivers to also be dynamically linked.
+
+config USB_LANGWELL
+	tristate
+	depends on USB_GADGET_LANGWELL
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+
 
 #
 # LAST -- dummy/emulated controller
@@ -490,6 +535,7 @@ config USB_GADGET_MSM_72K
 	depends on ARCH_MSM
 	select USB_GADGET_SELECTED
 	select USB_GADGET_DUALSPEED
+	select USB_OTG if USB_EHCI_MSM && PM
 	help
 	   USB gadget driver for Qualcomm MSM 72K architecture.
 
@@ -604,12 +650,28 @@ config USB_ZERO_HNPTEST
 	  the "B-Peripheral" role, that device will use HNP to let this
 	  one serve as the USB host instead (in the "B-Host" role).
 
+config USB_AUDIO
+	tristate "Audio Gadget (EXPERIMENTAL)"
+	depends on SND
+	select SND_PCM
+	help
+	  Gadget Audio is compatible with USB Audio Class specification 1.0.
+	  It will include at least one AudioControl interface, zero or more
+	  AudioStream interface and zero or more MIDIStream interface.
+
+	  Gadget Audio will use on-board ALSA (CONFIG_SND) audio card to
+	  playback or capture audio stream.
+
+	  Say "y" to link the driver statically, or "m" to build a
+	  dynamically linked module called "g_audio".
+
 config USB_ETH
 	tristate "Ethernet Gadget (with CDC Ethernet support)"
 	depends on NET
+	select CRC32
 	help
-	  This driver implements Ethernet style communication, in either
-	  of two ways:
+	  This driver implements Ethernet style communication, in one of
+	  several ways:
 	  
 	   - The "Communication Device Class" (CDC) Ethernet Control Model.
 	     That protocol is often avoided with pure Ethernet adapters, in
@@ -619,7 +681,11 @@ config USB_ETH
 	   - On hardware can't implement that protocol, a simple CDC subset
 	     is used, placing fewer demands on USB.
 
-	  RNDIS support is a third option, more demanding than that subset.
+	   - CDC Ethernet Emulation Model (EEM) is a newer standard that has
+	     a simpler interface that can be used by more USB hardware.
+
+	  RNDIS support is an additional option, more demanding than than
+	  subset.
 
 	  Within the USB device, this gadget driver exposes a network device
 	  "usbX", where X depends on what other networking devices you have.
@@ -651,6 +717,22 @@ config USB_ETH_RNDIS
 	   as the "driver info file".  For versions of MS-Windows older than
 	   XP, you'll need to download drivers from Microsoft's website; a URL
 	   is given in comments found in that info file.
+
+config USB_ETH_EEM
+       bool "Ethernet Emulation Model (EEM) support"
+       depends on USB_ETH
+       default n
+       help
+         CDC EEM is a newer USB standard that is somewhat simpler than CDC ECM
+         and therefore can be supported by more hardware.  Technically ECM and
+         EEM are designed for different applications.  The ECM model extends
+         the network interface to the target (e.g. a USB cable modem), and the
+         EEM model is for mobile devices to communicate with hosts using
+         ethernet over USB.  For Linux gadgets, however, the interface with
+         the host is the same (a usbX device), so the differences are minimal.
+
+         If you say "y" here, the Ethernet gadget driver will use the EEM
+         protocol rather than ECM.  If unsure, say "n".
 
 config USB_GADGETFS
 	tristate "Gadget Filesystem (EXPERIMENTAL)"
@@ -739,51 +821,88 @@ config USB_G_PRINTER
 	  which includes sample code for accessing the device file.
 
 config USB_ANDROID
-	tristate "Android Gadget"
+	boolean "Android Gadget"
+	depends on SWITCH
 	help
-	  The Android gadget provides mass storage and adb transport.
+	  The Android gadget driver supports multiple USB functions.
+	  The functions can be configured via a board file and may be
+	  enabled and disabled dynamically.
 
-	  Say "y" to link the driver statically, or "m" to build a
-	  dynamically linked module called "g_android".
+config USB_ANDROID_ACM
+	boolean "Android gadget ACM serial function"
+	depends on USB_ANDROID
+	default n
+	help
+	  Provides ACM serial function for android gadget driver.
+
+config USB_ANDROID_ADB
+	boolean "Android gadget adb function"
+	depends on USB_ANDROID
+	default y
+	help
+	  Provides adb function for android gadget driver.
 
 config USB_ANDROID_DIAG
-	tristate "diag function driver"
+	boolean "USB MSM7K Diag Function"
 	depends on USB_ANDROID
-	default n
+	default y
 	help
-	  Say "y" to link the driver statically, or "m" to build
-	  as a part of "g_android"
+	  Qualcomm diagnostics interface support.
 
-config USB_ANDROID_CDC_ECM
-	tristate "cdc ecm function driver"
-	depends on USB_ANDROID
+config USB_ANDROID_MASS_STORAGE
+	boolean "Android gadget mass storage function"
+	depends on USB_ANDROID && SWITCH
+	default y
+	help
+	  Provides USB mass storage function for android gadget driver.
+
+config USB_CSW_HACK
+	boolean "USB Mass storage csw hack Feature"
+	depends on USB_ANDROID_MASS_STORAGE
+	default y
+	help
+	 This csw hack feature is for increasing the performance of the mass
+	 storage
+
+config USB_KDDI_SCSI_EXTENSIONS
+	boolean "SCSI Command Extenstion for KDDI Device"
+	depends on USB_ANDROID_MASS_STORAGE
 	default n
 	help
-	  enabling this option adds CDC-ECM support to the
-	  android gadget.
-	  Say "y" to link the CDC-ECM as a part of android gadget
+	 The mass storage extension to communicate with KDDI application.
+
+config USB_MARLIN_SCSI_EXTENSIONS
+	boolean "SCSI Command Extenstion for Marlin Device"
+	depends on USB_ANDROID_MASS_STORAGE
+	default n
+	help
+	 The mass storage extension for marlin device.
 
 config USB_ANDROID_RNDIS
-	bool "RNDIS function driver"
+	boolean "Android gadget RNDIS ethernet function"
 	depends on USB_ANDROID
 	default n
 	help
-	  enabling this option adds RNDIS support to the
-	  android gadget.
+	  Provides RNDIS ethernet function for android gadget driver.
 
 config USB_ANDROID_RNDIS_WCEIS
-	boolean "Use Windows Internet Sharing Class/SubClass/Protocol"
-	depends on USB_ANDROID_RNDIS
-	default n
-	help
-	 Causes the driver to look like a Windows-compatible Internet
-	 Sharing device, so Windows auto-detects it
+        boolean "Use Windows Internet Sharing Class/SubClass/Protocol"
+        depends on USB_ANDROID_RNDIS
+        help
+         Causes the driver to look like a Windows-compatible Internet
+         Sharing device, so Windows auto-detects it.
 
-	 If you enable this option, the device is no longer CDC ethernet
-	 compatible.
+         If you enable this option, the device is no longer CDC ethernet
+         compatible.
+
+config USB_ANDROID_ACCESSORY
+	boolean "Android USB accessory function"
+	depends on USB_ANDROID
+	help
+	  Provides Android USB Accessory support for android gadget driver.
 
 config USB_ANDROID_RMNET
-	bool "RmNet function driver"
+	boolean "RmNet function driver"
 	depends on USB_ANDROID
 	default n
 	help
@@ -808,7 +927,7 @@ config RMNET_SMD_DATA_CHANNEL
 	  Data SMD channel for transferring network data
 
 config USB_F_SERIAL
-	tristate "generic serial function driver"
+	boolean "generic serial function driver"
 	depends on USB_ANDROID
 	default n
 	help
@@ -816,7 +935,7 @@ config USB_F_SERIAL
 	  as a part of "g_android"
 
 config MODEM_SUPPORT
-	tristate "modem support in generic serial function driver"
+	boolean "modem support in generic serial function driver"
 	depends on USB_F_SERIAL
 	default n
 	help
@@ -828,28 +947,19 @@ config MODEM_SUPPORT
 	  adds CDC class requests to configure MODEM line settings.
 	  Say "y" to enable MODEM support in the generic serial driver.
 
-config USB_CSW_HACK
-	boolean "USB Mass storage csw hack Feature"
+config USB_REMOTE_WAKEUP
+	boolean "USB remote wakeup support"
 	depends on USB_ANDROID
-	help
-	 This csw hack feature is for increasing the performance of the mass
-	 storage
-
-	default y
-
-config USB_POWER_REENUMERATION
-	tristate "Power reenumeration support"
-	depends on USB_ANDROID
-	help
-	  Enabling this option adds the power reenumeration support.
-
 	default n
+	help
+	  USB remote wakeup support.
 
-config USB_GADGET_REMOTE_WAKEUP
-	tristate "Remote wakeup support"
+config USB_ANDROID_MTP
+	boolean "USB Media Transfer Protocol driver"
 	depends on USB_ANDROID
 	help
-	  Enabling this option adds the remote wakeup support.
+	  Enabling this option adds MTP support to the
+	  android gadget.
 
 	default n
 

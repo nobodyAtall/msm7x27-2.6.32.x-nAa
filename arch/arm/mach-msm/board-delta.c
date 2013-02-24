@@ -59,8 +59,9 @@
 #include "board-delta.h"
 #include "msm-keypad-devices.h"
 #include "board-delta-keypad.h"
-#ifdef CONFIG_USB_ANDROID
-#include <linux/usb/android_composite.h>
+#include <linux/usb/android.h>
+#ifdef CONFIG_USB_ANDROID_ACCESSORY
+#include <linux/usb/f_accessory.h>
 #endif
 #ifdef CONFIG_SEMC_POWER_BQ24180
 #include <linux/semc/power/semc_power.h>
@@ -366,84 +367,30 @@ static struct platform_device semc_power_device = {
 #endif /* CONFIG_SEMC_POWER */
 
 #ifdef CONFIG_USB_ANDROID
-/* dynamic composition */
-static char *usb_func_msc[] = {
-	"usb_mass_storage",
-};
-static char *usb_func_msc_adb[] = {
-	"usb_mass_storage",
-	"adb",
-};
-static char *usb_func_rndis[] = {
-	"rndis",
-};
-static char *usb_func_adb_rndis[] = {
-	"rndis",
-	"adb",
-};
-
-static char *usb_func_msc_adb_eng[] = {
-	"usb_mass_storage",
-	"adb",
-	"modem",
-	"nmea",
-	"diag",
-};
-
-static char *usb_functions_all[] = {
-	"rndis",
-	"usb_mass_storage",
-	"adb",
-	"modem",
-	"nmea",
-	"diag",
-};
-static struct android_usb_product android_usb_products[] = {
-	{
-		.product_id = 0xE12E,
-		.functions = usb_func_msc,
-		.num_functions = ARRAY_SIZE(usb_func_msc),
-	},
-	{
-		.product_id = 0x612E,
-		.functions = usb_func_msc_adb,
-		.num_functions = ARRAY_SIZE(usb_func_msc_adb),
-	},
-	{
-		.product_id = 0x712E,
-		.functions = usb_func_rndis,
-		.num_functions = ARRAY_SIZE(usb_func_rndis),
-	},
-	{
-		.product_id = 0x812E,
-		.functions = usb_func_adb_rndis,
-		.num_functions = ARRAY_SIZE(usb_func_adb_rndis),
-	},
-	{
-		.product_id = 0x6146,
-		.functions = usb_func_msc_adb_eng,
-		.num_functions = ARRAY_SIZE(usb_func_msc_adb_eng),
-	}
-};
-
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
-        .nluns = 1,
-        .vendor = "SEMC",
-        .product = "Mass Storage",
-        .release = 0x0100,
+	.nluns = 1,
+	.vendor	= "SEMC",
+	.product = "Mass Storage",
+	.release = 0x0100,
 
-        .cdrom_nluns = 1,
-        .cdrom_vendor = "SEMC",
-        .cdrom_product = "CD-ROM",
-        .cdrom_release = 0x0100,
+	.cdrom_nluns = 1,
+	.cdrom_vendor = "SEMC",
+	.cdrom_product = "CD-ROM",
+	.cdrom_release = 0x0100,
+
+	/* EUI-64 based identifier format */
+	.eui64_id = {
+		.ieee_company_id = {0x00, 0x0A, 0xD9},
+		.vendor_specific_ext_field = {0x00, 0x00, 0x00, 0x00, 0x00},
+	},
 };
 
 static struct platform_device usb_mass_storage_device = {
-        .name = "usb_mass_storage",
-        .id = -1,
-        .dev = {
-                .platform_data = &mass_storage_pdata,
-                },
+	.name = "usb_mass_storage",
+	.id = -1,
+	.dev = {
+		.platform_data = &mass_storage_pdata,
+		},
 };
 
 static struct usb_ether_platform_data rndis_pdata = {
@@ -461,23 +408,20 @@ static struct platform_device rndis_device = {
 };
 
 static struct android_usb_platform_data android_usb_pdata = {
-	.vendor_id		= 0x0FCE,
-	.product_id		= 0xE12E,
-	.version		= 0x0100,
-	.product_name		= "SEMC HSUSB Device",
-	.manufacturer_name	= "SEMC",
-	.serial_number		= "1234567890ABCDEF",
-	.num_products		= ARRAY_SIZE(android_usb_products),
-	.products		= android_usb_products,
-	.num_functions		= ARRAY_SIZE(usb_functions_all),
-	.functions		= usb_functions_all,
+	.vendor_id = 0x0FCE,
+	.version = 0x0100,
+	.product_name = "SEMC HSUSB Device",
+	.manufacturer_name = "SEMC",
+	.usb_mass_storage_device = &usb_mass_storage_device,
+	/* .serial_number filled_in by board_serialno_setup */
 };
+
 static struct platform_device android_usb_device = {
-	.name	= "android_usb",
-	.id		= -1,
-	.dev		= {
+	.name = "android_usb",
+	.id = -1,
+	.dev = {
 		.platform_data = &android_usb_pdata,
-	},
+		},
 };
 #endif
 
@@ -698,21 +642,6 @@ static struct platform_device semc_gpio_extr_device = {
 static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 };
 
-#if 0
-extern void usb_function_enable(const char*, int);
-
-static int __init delta_init_usb(void)
-{
-	if (startup_reason & STARTUP_REASON_TYPE_APPROVAL) {
-		printk(KERN_INFO "GTA mode: enabling cdc-ether\n");
-		usb_function_enable("ethernet", 1);
-	}
-
-	return 0;
-}
-late_initcall(delta_init_usb);
-#endif
-
 static int hsusb_rpc_connect(int connect)
 {
 	if (connect)
@@ -723,17 +652,68 @@ static int hsusb_rpc_connect(int connect)
 
 static int msm_hsusb_rpc_phy_reset(void __iomem *addr)
 {
-	return msm_hsusb_phy_reset();
+        return msm_hsusb_phy_reset();
+}
+
+struct vreg *vreg_3p3;
+static int msm_hsusb_ldo_init(int init)
+{
+	if (init) {
+		vreg_3p3 = vreg_get(NULL, "usb");
+		if (IS_ERR(vreg_3p3))
+			return PTR_ERR(vreg_3p3);
+		vreg_set_level(vreg_3p3, 3300);
+	} else
+		vreg_put(vreg_3p3);
+
+	return 0;
+}
+
+static int msm_hsusb_ldo_enable(int enable)
+{
+	static int ldo_status;
+
+	if (!vreg_3p3 || IS_ERR(vreg_3p3))
+		return -ENODEV;
+
+	if (ldo_status == enable)
+		return 0;
+
+	ldo_status = enable;
+
+	pr_info("%s: %d", __func__, enable);
+
+	if (enable)
+		return vreg_enable(vreg_3p3);
+
+	return vreg_disable(vreg_3p3);
+}
+
+static int msm_hsusb_pmic_notif_init(void (*callback)(int online), int init)
+{
+	int ret;
+
+	if (init) {
+		ret = msm_pm_app_rpc_init(callback);
+	} else {
+		msm_pm_app_rpc_deinit(callback);
+		ret = 0;
+	}
+	return ret;
 }
 
 static struct msm_otg_platform_data msm_otg_pdata = {
-	.rpc_connect             = hsusb_rpc_connect,
-	.phy_reset               = msm_hsusb_rpc_phy_reset,
-	.pmic_notif_init         = msm_pm_app_rpc_init,
-	.pmic_notif_deinit       = msm_pm_app_rpc_deinit,
-	.pmic_register_vbus_sn   = msm_pm_app_register_vbus_sn,
-	.pmic_unregister_vbus_sn = msm_pm_app_unregister_vbus_sn,
-	.pmic_enable_ldo         = msm_pm_app_enable_usb_ldo,
+	.rpc_connect	= hsusb_rpc_connect,
+	.phy_reset      = msm_hsusb_rpc_phy_reset,
+	.pmic_notif_init         = msm_hsusb_pmic_notif_init,
+	.chg_vbus_draw		 = hsusb_chg_vbus_draw,
+	.chg_connected		 = hsusb_chg_connected,
+	.chg_init		 = hsusb_chg_init,
+#ifdef CONFIG_USB_EHCI_MSM
+	.vbus_power = msm_hsusb_vbus_power,
+#endif
+	.ldo_init		= msm_hsusb_ldo_init,
+	.ldo_enable		= msm_hsusb_ldo_enable,
 };
 
 static struct msm_hsusb_gadget_platform_data msm_gadget_pdata;
@@ -2575,10 +2555,6 @@ static void __init msm7x2x_init(void)
 
 	msm_device_hsusb_peripheral.dev.platform_data = &msm_hsusb_pdata;
 	msm_device_otg.dev.platform_data = &msm_otg_pdata;
-
-	msm_gadget_pdata.swfi_latency =
-		msm7x27_pm_data
-		[MSM_PM_SLEEP_MODE_RAMP_DOWN_AND_WAIT_FOR_INTERRUPT].latency;
 	msm_device_gadget_peripheral.dev.platform_data = &msm_gadget_pdata;
 	msm_device_hsusb_host.dev.platform_data = &msm_hsusb_pdata;
 	msm_device_uart_dm1.dev.platform_data = &bt_uart_platform_data_delta;
