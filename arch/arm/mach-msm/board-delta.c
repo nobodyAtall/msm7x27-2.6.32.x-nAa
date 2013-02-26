@@ -642,6 +642,28 @@ static struct platform_device semc_gpio_extr_device = {
 static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 };
 
+#ifdef CONFIG_USB_EHCI_MSM
+static void msm_hsusb_vbus_power(unsigned phy_info, int on)
+{
+	if (on)
+		msm_hsusb_vbus_powerup();
+	else
+		msm_hsusb_vbus_shutdown();
+}
+
+static struct msm_usb_host_platform_data msm_usb_host_pdata = {
+	.phy_info       = (USB_PHY_INTEGRATED | USB_PHY_MODEL_65NM),
+	.vbus_power = msm_hsusb_vbus_power,
+};
+static void __init msm7x2x_init_host(void)
+{
+	if (machine_is_msm7x25_ffa() || machine_is_msm7x27_ffa())
+		return;
+
+	msm_add_host(0, &msm_usb_host_pdata);
+}
+#endif
+
 static int hsusb_rpc_connect(int connect)
 {
 	if (connect)
@@ -2570,6 +2592,9 @@ static void __init msm7x2x_init(void)
 	platform_device_register(&shakira_reset_keys_device);
 #endif
 	msm_fb_add_devices();
+#ifdef CONFIG_USB_EHCI_MSM
+	msm7x2x_init_host();
+#endif
 	rmt_storage_add_ramfs();
 	msm7x2x_init_mmc();
 	bt_power_init();
