@@ -849,7 +849,7 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 		action = *action_ptr;
 
 		if (!action) {
-			WARN(1, "Trying to free already-free IRQ %d\n", irq);
+			pr_warning("Trying to free already-free IRQ %d\n", irq);
 			spin_unlock_irqrestore(&desc->lock, flags);
 
 			return NULL;
