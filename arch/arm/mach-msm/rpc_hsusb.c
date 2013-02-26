@@ -1,6 +1,7 @@
 /* linux/arch/arm/mach-msm/rpc_hsusb.c
  *
  * Copyright (c) 2008-2009, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2010 Sony Ericsson Mobile Communications AB.
  *
  * All source code in this file is licensed under the following license except
  * where indicated.
@@ -21,6 +22,9 @@
 #include <linux/err.h>
 #include <mach/rpc_hsusb.h>
 #include <asm/mach-types.h>
+#include <linux/mutex.h>
+#include <linux/power_supply.h>
+#include <linux/delay.h>
 
 static struct msm_rpc_endpoint *usb_ep;
 static struct msm_rpc_endpoint *chg_ep;
@@ -33,13 +37,9 @@ struct msm_chg_rpc_ids {
 	unsigned	chg_usb_charger_disconnected_proc;
 	unsigned	chg_usb_i_is_available_proc;
 	unsigned	chg_usb_i_is_not_available_proc;
+#ifdef CONFIG_ARCH_MSM7X27
 	unsigned	chg_is_charging_proc;
-#if defined(CONFIG_MACH_ES209RA)
-	unsigned	chg_battery_thermo_proc;
-	unsigned	chg_charger_current_proc;
-	unsigned	chg_qsd_thermo_proc;
-	unsigned	chg_charger_thermo_proc;
-#endif /* CONFIG_MACH_ES209RA */
+#endif
 };
 
 struct msm_hsusb_rpc_ids {
@@ -59,6 +59,7 @@ struct msm_hsusb_rpc_ids {
 static struct msm_hsusb_rpc_ids usb_rpc_ids;
 static struct msm_chg_rpc_ids chg_rpc_ids;
 
+#ifdef CONFIG_ARCH_MSM7X27
 #if defined(CONFIG_SEMC_POWER) || \
     defined(CONFIG_SEMC_POWER_MODULE) || \
     defined(CONFIG_MAX17040_FUELGAUGE)
@@ -68,6 +69,34 @@ static u32 semc_usb_max_current = 0;
 #endif /* CONFIG_SEMC_POWER ||
 	  CONFIG_SEMC_POWER_MODULE ||
 	  CONFIG_MAX17040_FUELGAUGE */
+
+#if defined(CONFIG_SEMC_POWER) || \
+    defined(CONFIG_SEMC_POWER_MODULE) || \
+    defined(CONFIG_MAX17040_FUELGAUGE)
+void msm_chg_rpc_register_semc_callback(usb_connect_status_callback_t connect_status_fn)
+{
+	semc_usb_connected_callback_fn = connect_status_fn;
+}
+EXPORT_SYMBOL(msm_chg_rpc_register_semc_callback);
+
+void msm_chg_rpc_unregister_semc_callback(void)
+{
+	semc_usb_connected_callback_fn = NULL;
+}
+EXPORT_SYMBOL(msm_chg_rpc_unregister_semc_callback);
+
+void msm_chg_rpc_semc_get_usb_connected(enum semc_charger *connected, u16 *max_current)
+{
+	if (connected && max_current) {
+		*connected = semc_charger_connected;
+		*max_current = (u16)semc_usb_max_current;
+	}
+}
+EXPORT_SYMBOL(msm_chg_rpc_semc_get_usb_connected);
+#endif /* CONFIG_SEMC_POWER ||
+	  CONFIG_SEMC_POWER_MODULE ||
+	  CONFIG_MAX17040_FUELGAUGE */
+#endif
 
 static int msm_hsusb_init_rpc_ids(unsigned long vers)
 {
@@ -98,7 +127,7 @@ static int msm_hsusb_init_rpc_ids(unsigned long vers)
 		usb_rpc_ids.disable_pmic_ulpi_data0	= 19;
 		return 0;
 	} else {
-		printk(KERN_INFO "%s: no matches found for version\n",
+		pr_info("%s: no matches found for version\n",
 			__func__);
 		return -ENODATA;
 	}
@@ -107,23 +136,25 @@ static int msm_hsusb_init_rpc_ids(unsigned long vers)
 static int msm_chg_init_rpc(unsigned long vers)
 {
 	if (((vers & RPC_VERSION_MAJOR_MASK) == 0x00010000) ||
+#ifdef CONFIG_ARCH_MSM7X27
 	    ((vers & RPC_VERSION_MAJOR_MASK) == 0x00020000)) {
+#else
+	    ((vers & RPC_VERSION_MAJOR_MASK) == 0x00020000) ||
+	    ((vers & RPC_VERSION_MAJOR_MASK) == 0x00030000) ||
+	    ((vers & RPC_VERSION_MAJOR_MASK) == 0x00040000)) {
+#endif
 		chg_ep = msm_rpc_connect_compatible(MSM_RPC_CHG_PROG, vers,
 						     MSM_RPC_UNINTERRUPTIBLE);
 		if (IS_ERR(chg_ep))
 			return -ENODATA;
 		chg_rpc_ids.vers_comp				= vers;
+#ifdef CONFIG_ARCH_MSM7X27
 		chg_rpc_ids.chg_is_charging_proc 		= 2;
+#endif
 		chg_rpc_ids.chg_usb_charger_connected_proc 	= 7;
 		chg_rpc_ids.chg_usb_charger_disconnected_proc 	= 8;
 		chg_rpc_ids.chg_usb_i_is_available_proc 	= 9;
 		chg_rpc_ids.chg_usb_i_is_not_available_proc 	= 10;
-#if defined(CONFIG_MACH_ES209RA)
-		chg_rpc_ids.chg_battery_thermo_proc		= 22;
-		chg_rpc_ids.chg_charger_current_proc = 23;
-		chg_rpc_ids.chg_qsd_thermo_proc = 24;
-		chg_rpc_ids.chg_charger_thermo_proc = 25;
-#endif /* CONFIG_MACH_ES209RA */
 		return 0;
 	} else
 		return -ENODATA;
@@ -134,13 +165,13 @@ int msm_hsusb_rpc_connect(void)
 {
 
 	if (usb_ep && !IS_ERR(usb_ep)) {
-		printk(KERN_INFO "%s: usb_ep already connected\n", __func__);
+		pr_info("%s: usb_ep already connected\n", __func__);
 		return 0;
 	}
 
 	/* Initialize rpc ids */
 	if (msm_hsusb_init_rpc_ids(0x00010001)) {
-		printk(KERN_ERR "%s: rpc ids initialization failed\n"
+		pr_err("%s: rpc ids initialization failed\n"
 			, __func__);
 		return -ENODATA;
 	}
@@ -150,12 +181,12 @@ int msm_hsusb_rpc_connect(void)
 					MSM_RPC_UNINTERRUPTIBLE);
 
 	if (IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: connect compatible failed vers = %lx\n",
+		pr_err("%s: connect compatible failed vers = %lx\n",
 			 __func__, usb_rpc_ids.vers_comp);
 
 		/* Initialize rpc ids */
 		if (msm_hsusb_init_rpc_ids(0x00010002)) {
-			printk(KERN_ERR "%s: rpc ids initialization failed\n",
+			pr_err("%s: rpc ids initialization failed\n",
 				__func__);
 			return -ENODATA;
 		}
@@ -165,11 +196,11 @@ int msm_hsusb_rpc_connect(void)
 	}
 
 	if (IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: connect compatible failed vers = %lx\n",
+		pr_err("%s: connect compatible failed vers = %lx\n",
 				__func__, usb_rpc_ids.vers_comp);
 		return -EAGAIN;
 	} else
-		printk(KERN_INFO "%s: rpc connect success vers = %lx\n",
+		pr_debug("%s: rpc connect success vers = %lx\n",
 				__func__, usb_rpc_ids.vers_comp);
 
 	return 0;
@@ -187,10 +218,18 @@ int msm_chg_rpc_connect(void)
 		return -ENOTSUPP;
 
 	if (chg_ep && !IS_ERR(chg_ep)) {
-		printk(KERN_INFO "%s: chg_ep already connected\n", __func__);
+		pr_debug("%s: chg_ep already connected\n", __func__);
 		return 0;
 	}
+#ifndef CONFIG_ARCH_MSM7X27
+	chg_vers = 0x00040001;
+	if (!msm_chg_init_rpc(chg_vers))
+		goto chg_found;
 
+	chg_vers = 0x00030001;
+	if (!msm_chg_init_rpc(chg_vers))
+		goto chg_found;
+#endif
 	chg_vers = 0x00020001;
 	if (!msm_chg_init_rpc(chg_vers))
 		goto chg_found;
@@ -199,12 +238,12 @@ int msm_chg_rpc_connect(void)
 	if (!msm_chg_init_rpc(chg_vers))
 		goto chg_found;
 
-	printk(KERN_ERR "%s: connect compatible failed \n",
+	pr_err("%s: connect compatible failed \n",
 			__func__);
 	return -EAGAIN;
 
 chg_found:
-	printk(KERN_INFO "%s: connected to rpc vers = %x\n",
+	pr_debug("%s: connected to rpc vers = %x\n",
 			__func__, chg_vers);
 	return 0;
 }
@@ -219,7 +258,7 @@ int msm_hsusb_phy_reset(void)
 	} req;
 
 	if (!usb_ep || IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: phy_reset rpc failed before call,"
+		pr_err("%s: phy_reset rpc failed before call,"
 			"rc = %ld\n", __func__, PTR_ERR(usb_ep));
 		return -EAGAIN;
 	}
@@ -228,10 +267,10 @@ int msm_hsusb_phy_reset(void)
 				&req, sizeof(req), 5 * HZ);
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: phy_reset rpc failed! rc = %d\n",
+		pr_err("%s: phy_reset rpc failed! rc = %d\n",
 			__func__, rc);
 	} else
-		printk(KERN_INFO "msm_hsusb_phy_reset\n");
+		pr_debug("msm_hsusb_phy_reset\n");
 
 	return rc;
 }
@@ -246,7 +285,7 @@ int msm_hsusb_vbus_powerup(void)
 	} req;
 
 	if (!usb_ep || IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: vbus_powerup rpc failed before call,"
+		pr_err("%s: vbus_powerup rpc failed before call,"
 			"rc = %ld\n", __func__, PTR_ERR(usb_ep));
 		return -EAGAIN;
 	}
@@ -255,10 +294,10 @@ int msm_hsusb_vbus_powerup(void)
 		&req, sizeof(req), 5 * HZ);
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: vbus_powerup failed! rc = %d\n",
+		pr_err("%s: vbus_powerup failed! rc = %d\n",
 			__func__, rc);
 	} else
-		printk(KERN_INFO "msm_hsusb_vbus_powerup\n");
+		pr_debug("msm_hsusb_vbus_powerup\n");
 
 	return rc;
 }
@@ -273,7 +312,7 @@ int msm_hsusb_vbus_shutdown(void)
 	} req;
 
 	if (!usb_ep || IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: vbus_shutdown rpc failed before call,"
+		pr_err("%s: vbus_shutdown rpc failed before call,"
 			"rc = %ld\n", __func__, PTR_ERR(usb_ep));
 		return -EAGAIN;
 	}
@@ -282,10 +321,10 @@ int msm_hsusb_vbus_shutdown(void)
 		&req, sizeof(req), 5 * HZ);
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: vbus_shutdown failed! rc = %d\n",
+		pr_err("%s: vbus_shutdown failed! rc = %d\n",
 			__func__, rc);
 	} else
-		printk(KERN_INFO "msm_hsusb_vbus_shutdown\n");
+		pr_debug("msm_hsusb_vbus_shutdown\n");
 
 	return rc;
 }
@@ -300,7 +339,7 @@ int msm_hsusb_send_productID(uint32_t product_id)
 	} req;
 
 	if (!usb_ep || IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: rpc connect failed: rc = %ld\n",
+		pr_err("%s: rpc connect failed: rc = %ld\n",
 			__func__, PTR_ERR(usb_ep));
 		return -EAGAIN;
 	}
@@ -310,11 +349,11 @@ int msm_hsusb_send_productID(uint32_t product_id)
 				&req, sizeof(req),
 				5 * HZ);
 	if (rc < 0)
-		printk(KERN_ERR "%s: rpc call failed! error: %d\n",
+		pr_err("%s: rpc call failed! error: %d\n",
 			__func__, rc);
 	else
-		printk(KERN_ERR "%s: rpc call success\n" ,
-			__func__);
+		pr_debug("%s: rpc call success\n" , __func__);
+
 	return rc;
 }
 EXPORT_SYMBOL(msm_hsusb_send_productID);
@@ -329,7 +368,7 @@ int msm_hsusb_send_serial_number(char *serial_number)
 	} req;
 
 	if (!usb_ep || IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: rpc connect failed: rc = %ld\n",
+		pr_err("%s: rpc connect failed: rc = %ld\n",
 			__func__, PTR_ERR(usb_ep));
 		return -EAGAIN;
 	}
@@ -341,11 +380,11 @@ int msm_hsusb_send_serial_number(char *serial_number)
 				&req, sizeof(req),
 				5 * HZ);
 	if (rc < 0)
-		printk(KERN_ERR "%s: rpc call failed! error: %d\n",
+		pr_err("%s: rpc call failed! error: %d\n",
 			__func__, rc);
 	else
-		printk(KERN_ERR "%s: rpc call success\n" ,
-			__func__);
+		pr_debug("%s: rpc call success\n", __func__);
+
 	return rc;
 }
 EXPORT_SYMBOL(msm_hsusb_send_serial_number);
@@ -359,12 +398,12 @@ int msm_hsusb_is_serial_num_null(uint32_t val)
 	} req;
 
 	if (!usb_ep || IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: rpc connect failed: rc = %ld\n",
+		pr_err("%s: rpc connect failed: rc = %ld\n",
 			__func__, PTR_ERR(usb_ep));
 		return -EAGAIN;
 	}
 	if (!usb_rpc_ids.update_is_serial_num_null) {
-		printk(KERN_ERR "%s: proc id not supported \n", __func__);
+		pr_err("%s: proc id not supported \n", __func__);
 		return -ENODATA;
 	}
 
@@ -373,11 +412,10 @@ int msm_hsusb_is_serial_num_null(uint32_t val)
 				&req, sizeof(req),
 				5 * HZ);
 	if (rc < 0)
-		printk(KERN_ERR "%s: rpc call failed! error: %d\n" ,
+		pr_err("%s: rpc call failed! error: %d\n" ,
 			__func__, rc);
 	else
-		printk(KERN_ERR "%s: rpc call success\n" ,
-			__func__);
+		pr_debug("%s: rpc call success\n", __func__);
 
 	return rc;
 }
@@ -386,11 +424,13 @@ EXPORT_SYMBOL(msm_hsusb_is_serial_num_null);
 int msm_chg_usb_charger_connected(uint32_t device)
 {
 	int rc = 0;
+#if defined (CONFIG_USE_PMIC_CHARGING_ON_AMSS) || defined (CONFIG_ARCH_MSM7X27)
 	struct hsusb_start_req {
 		struct rpc_request_hdr hdr;
 		uint32_t otg_dev;
 	} req;
-
+printk(KERN_ERR"msm_chg_usb_charger_connected\n");
+#ifdef CONFIG_ARCH_MSM7X27
 #if defined(CONFIG_SEMC_POWER) || \
     defined(CONFIG_SEMC_POWER_MODULE) || \
     defined(CONFIG_MAX17040_FUELGAUGE)
@@ -400,13 +440,13 @@ int msm_chg_usb_charger_connected(uint32_t device)
 		semc_charger_connected = WALL_CHARGER;
 	else
 		semc_charger_connected = NO_CHARGER;
-
+printk(KERN_ERR"msm_chg_usb_charger_connected semc_usb_max_current: %d\n", semc_usb_max_current);
 	if (semc_usb_connected_callback_fn)
 		semc_usb_connected_callback_fn(semc_charger_connected, semc_usb_max_current);
 #endif /* CONFIG_SEMC_POWER ||
 	  CONFIG_SEMC_POWER_MODULE ||
 	  CONFIG_MAX17040_FUELGAUGE */
-
+#endif
 	if (!chg_ep || IS_ERR(chg_ep))
 		return -EAGAIN;
 	req.otg_dev = cpu_to_be32(device);
@@ -414,10 +454,11 @@ int msm_chg_usb_charger_connected(uint32_t device)
 			&req, sizeof(req), 5 * HZ);
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: charger_connected failed! rc = %d\n",
+		pr_err("%s: charger_connected failed! rc = %d\n",
 			__func__, rc);
 	} else
-		printk(KERN_INFO "msm_chg_usb_charger_connected\n");
+		pr_debug("msm_chg_usb_charger_connected\n");
+#endif
 
 	return rc;
 }
@@ -426,11 +467,13 @@ EXPORT_SYMBOL(msm_chg_usb_charger_connected);
 int msm_chg_usb_i_is_available(uint32_t sample)
 {
 	int rc = 0;
+
+#if defined (CONFIG_USE_PMIC_CHARGING_ON_AMSS) || defined (CONFIG_ARCH_MSM7X27)
 	struct hsusb_start_req {
 		struct rpc_request_hdr hdr;
 		uint32_t i_ma;
 	} req;
-
+#ifdef CONFIG_ARCH_MSM7X27
 #if defined(CONFIG_SEMC_POWER) || \
     defined(CONFIG_SEMC_POWER_MODULE) || \
     defined(CONFIG_MAX17040_FUELGAUGE)
@@ -441,7 +484,7 @@ int msm_chg_usb_i_is_available(uint32_t sample)
 #endif /* CONFIG_SEMC_POWER ||
 	  CONFIG_SEMC_POWER_MODULE ||
 	  CONFIG_MAX17040_FUELGAUGE */
-
+#endif
 	if (!chg_ep || IS_ERR(chg_ep))
 		return -EAGAIN;
 	req.i_ma = cpu_to_be32(sample);
@@ -449,10 +492,13 @@ int msm_chg_usb_i_is_available(uint32_t sample)
 			&req, sizeof(req), 5 * HZ);
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: charger_i_available failed! rc = %d\n",
+		pr_err("%s: charger_i_available failed! rc = %d\n",
 			__func__, rc);
 	} else
-		pr_info("msm_chg_usb_i_is_available(%u)\n", sample);
+		pr_debug("msm_chg_usb_i_is_available(%u)\n", sample);
+
+	usleep(3000);
+#endif
 
 	return rc;
 }
@@ -461,10 +507,12 @@ EXPORT_SYMBOL(msm_chg_usb_i_is_available);
 int msm_chg_usb_i_is_not_available(void)
 {
 	int rc = 0;
+
+#if defined (CONFIG_USE_PMIC_CHARGING_ON_AMSS) || defined (CONFIG_ARCH_MSM7X27)
 	struct hsusb_start_req {
 		struct rpc_request_hdr hdr;
 	} req;
-
+#ifdef CONFIG_ARCH_MSM7X27
 #if defined(CONFIG_SEMC_POWER) || \
     defined(CONFIG_SEMC_POWER_MODULE) || \
     defined(CONFIG_MAX17040_FUELGAUGE)
@@ -475,17 +523,18 @@ int msm_chg_usb_i_is_not_available(void)
 #endif /* CONFIG_SEMC_POWER ||
 	  CONFIG_SEMC_POWER_MODULE ||
 	  CONFIG_MAX17040_FUELGAUGE */
-
+#endif
 	if (!chg_ep || IS_ERR(chg_ep))
 		return -EAGAIN;
 	rc = msm_rpc_call(chg_ep, chg_rpc_ids.chg_usb_i_is_not_available_proc,
 			&req, sizeof(req), 5 * HZ);
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: charger_i_not_available failed! rc ="
+		pr_err("%s: charger_i_not_available failed! rc ="
 			"%d \n", __func__, rc);
 	} else
-		printk(KERN_INFO "msm_chg_usb_i_is_not_available\n");
+		pr_debug("msm_chg_usb_i_is_not_available\n");
+#endif
 
 	return rc;
 }
@@ -494,10 +543,12 @@ EXPORT_SYMBOL(msm_chg_usb_i_is_not_available);
 int msm_chg_usb_charger_disconnected(void)
 {
 	int rc = 0;
+
+#if defined (CONFIG_USE_PMIC_CHARGING_ON_AMSS) || defined (CONFIG_ARCH_MSM7X27)
 	struct hsusb_start_req {
 		struct rpc_request_hdr hdr;
 	} req;
-
+#ifdef CONFIG_ARCH_MSM7X27
 #if defined(CONFIG_SEMC_POWER) || \
     defined(CONFIG_SEMC_POWER_MODULE) || \
     defined(CONFIG_MAX17040_FUELGAUGE)
@@ -509,17 +560,18 @@ int msm_chg_usb_charger_disconnected(void)
 #endif /* CONFIG_SEMC_POWER ||
 	  CONFIG_SEMC_POWER_MODULE ||
 	  CONFIG_MAX17040_FUELGAUGE */
-
+#endif
 	if (!chg_ep || IS_ERR(chg_ep))
 		return -EAGAIN;
 	rc = msm_rpc_call(chg_ep, chg_rpc_ids.chg_usb_charger_disconnected_proc,
 			&req, sizeof(req), 5 * HZ);
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: charger_disconnected failed! rc = %d\n",
+		pr_err("%s: charger_disconnected failed! rc = %d\n",
 			__func__, rc);
 	} else
-		printk(KERN_INFO "msm_chg_usb_charger_disconnected\n");
+		pr_debug("msm_chg_usb_charger_disconnected\n");
+#endif
 
 	return rc;
 }
@@ -531,7 +583,7 @@ int msm_hsusb_rpc_close(void)
 	int rc = 0;
 
 	if (IS_ERR(usb_ep)) {
-		printk(KERN_ERR "%s: rpc_close failed before call, rc = %ld\n",
+		pr_err("%s: rpc_close failed before call, rc = %ld\n",
 			__func__, PTR_ERR(usb_ep));
 		return -EAGAIN;
 	}
@@ -540,11 +592,11 @@ int msm_hsusb_rpc_close(void)
 	usb_ep = NULL;
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: close rpc failed! rc = %d\n",
+		pr_err("%s: close rpc failed! rc = %d\n",
 			__func__, rc);
 		return -EAGAIN;
 	} else
-		printk(KERN_INFO "rpc close success\n");
+		pr_debug("rpc close success\n");
 
 	return rc;
 }
@@ -555,8 +607,8 @@ int msm_chg_rpc_close(void)
 {
 	int rc = 0;
 
-	if (IS_ERR(chg_ep)) {
-		printk(KERN_ERR "%s: rpc_close failed before call, rc = %ld\n",
+	if (!chg_ep || IS_ERR(chg_ep)) {
+		pr_err("%s: rpc_close failed before call, rc = %ld\n",
 			__func__, PTR_ERR(chg_ep));
 		return -EAGAIN;
 	}
@@ -565,11 +617,11 @@ int msm_chg_rpc_close(void)
 	chg_ep = NULL;
 
 	if (rc < 0) {
-		printk(KERN_ERR "%s: close rpc failed! rc = %d\n",
+		pr_err("%s: close rpc failed! rc = %d\n",
 			__func__, rc);
 		return -EAGAIN;
 	} else
-		printk(KERN_INFO "rpc close success\n");
+		pr_debug("rpc close success\n");
 
 	return rc;
 }
@@ -649,7 +701,74 @@ int msm_hsusb_disable_pmic_ulpidata0(void)
 }
 EXPORT_SYMBOL(msm_hsusb_disable_pmic_ulpidata0);
 
-#ifdef CONFIG_USB_GADGET_MSM_72K
+static enum power_supply_property hsusb_chg_props[] = {
+	POWER_SUPPLY_PROP_ONLINE,
+};
+
+static char **hsusb_chg_supplied_to;
+static size_t hsusb_chg_num_supplicants;
+
+struct hsusb_chg_state {
+	struct power_supply supply_usb;
+	struct power_supply supply_ac;
+	enum chg_type connected;
+	unsigned int usb_chg_current_ma;
+	struct mutex lock;
+};
+
+static int hsusb_chg_get_property(struct power_supply *,
+		enum power_supply_property psp,
+		union power_supply_propval *val);
+
+static struct hsusb_chg_state hsusb_chg_state = {
+	.supply_usb = {
+		.name = "hsusb_chg",
+		.type = POWER_SUPPLY_TYPE_USB,
+		.properties = hsusb_chg_props,
+		.num_properties = ARRAY_SIZE(hsusb_chg_props),
+		.get_property = hsusb_chg_get_property,
+	},
+	.supply_ac = {
+		.name = "ac",
+		.type = POWER_SUPPLY_TYPE_MAINS,
+		.properties = hsusb_chg_props,
+		.num_properties = ARRAY_SIZE(hsusb_chg_props),
+		.get_property = hsusb_chg_get_property,
+	},
+	.connected = USB_CHG_TYPE__INVALID,
+	.usb_chg_current_ma = 0,
+};
+
+void hsusb_chg_set_supplicants(char **supplied_to, size_t num_supplicants)
+{
+	hsusb_chg_supplied_to = supplied_to;
+	hsusb_chg_num_supplicants = num_supplicants;
+
+}
+EXPORT_SYMBOL(hsusb_chg_set_supplicants);
+
+static int hsusb_chg_get_property(struct power_supply *bat_ps,
+		enum power_supply_property psp,
+		union power_supply_propval *val)
+{
+	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		if (bat_ps->type == POWER_SUPPLY_TYPE_MAINS &&
+		    hsusb_chg_state.connected == USB_CHG_TYPE__WALLCHARGER)
+			val->intval = 1;
+		else if (bat_ps->type == POWER_SUPPLY_TYPE_USB &&
+			 hsusb_chg_state.connected == USB_CHG_TYPE__SDP &&
+			 hsusb_chg_state.usb_chg_current_ma != 0)
+			val->intval = 1;
+		else
+			val->intval = 0;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
 /* charger api wrappers */
 int hsusb_chg_init(int connect)
 {
@@ -684,191 +803,15 @@ void hsusb_chg_connected(enum chg_type chgtype)
 	msm_chg_usb_charger_connected(chgtype);
 }
 EXPORT_SYMBOL(hsusb_chg_connected);
-#endif
-	
-#if defined(CONFIG_SEMC_POWER) || \
-    defined(CONFIG_SEMC_POWER_MODULE) || \
-    defined(CONFIG_MAX17040_FUELGAUGE)
-void msm_chg_rpc_register_semc_callback(usb_connect_status_callback_t connect_status_fn)
+
+unsigned int hsusb_get_chg_current_ma(void)
 {
-	semc_usb_connected_callback_fn = connect_status_fn;
+	unsigned int ma;
+
+	mutex_lock(&hsusb_chg_state.lock);
+	ma = hsusb_chg_state.usb_chg_current_ma;
+	mutex_unlock(&hsusb_chg_state.lock);
+
+	return ma;
 }
-EXPORT_SYMBOL(msm_chg_rpc_register_semc_callback);
-
-void msm_chg_rpc_unregister_semc_callback(void)
-{
-	semc_usb_connected_callback_fn = NULL;
-}
-EXPORT_SYMBOL(msm_chg_rpc_unregister_semc_callback);
-
-void msm_chg_rpc_semc_get_usb_connected(enum semc_charger *connected, u16 *max_current)
-{
-	if (connected && max_current) {
-		*connected = semc_charger_connected;
-		*max_current = (u16)semc_usb_max_current;
-	}
-}
-EXPORT_SYMBOL(msm_chg_rpc_semc_get_usb_connected);
-#endif /* CONFIG_SEMC_POWER ||
-	  CONFIG_SEMC_POWER_MODULE ||
-	  CONFIG_MAX17040_FUELGAUGE */
-
-#if defined(CONFIG_MACH_ES209RA)
-int msm_hsusb_chg_is_charging(void)
-{
-	struct hsusb_start_req {
-		struct rpc_request_hdr hdr;
-	} req;
-	struct hsusb_rpc_rep {
-		struct rpc_reply_hdr hdr;
-		u32 charge_status;
-	} rep;
-	int rc;
-
-	if (!chg_ep || IS_ERR(chg_ep))
-		return -EAGAIN;
-
-	rc = msm_rpc_call_reply(chg_ep, chg_rpc_ids.chg_is_charging_proc,
-				&req, sizeof(req),
-				&rep, sizeof(rep), (5 * HZ));
-	if (rc < 0) {
-		pr_err("%s: rpc call failed! error: (%d)"
-				"proc id: (0x%08x)\n",
-				__func__, rc,
-				chg_rpc_ids.chg_is_charging_proc);
-		return rc;
-	}
-
-	return be32_to_cpu(rep.charge_status);
-}
-EXPORT_SYMBOL(msm_hsusb_chg_is_charging);
-
-int msm_chg_battery_thermo(void)
-{
-	int rc = 0;
-	struct hsusb_start_req {
-		struct rpc_request_hdr hdr;
-	} req;
-	struct hsusb_rpc_rep {
-		struct rpc_reply_hdr hdr;
-		u32 battery_thermo;
-	} rep;
-	
-	memset(&rep, 0, sizeof(rep));
-	
-	if (!chg_ep || IS_ERR(chg_ep))
-		return -EAGAIN;
-
-	rc = msm_rpc_call_reply(chg_ep, chg_rpc_ids.chg_battery_thermo_proc,
-				&req, sizeof(req),
-				&rep, sizeof(rep), (5 * HZ));
-	if (rc < 0) {
-		printk(KERN_INFO "[RPC Check] msm_chg_battery_thermo() rc < 0\n");
-		pr_err("%s: rpc call failed! error: (%d)"
-				"proc id: (0x%08x)\n",
-				__func__, rc,
-				chg_rpc_ids.chg_battery_thermo_proc);
-		return rc;
-	}
-
-	return be32_to_cpu(rep.battery_thermo);
-}
-EXPORT_SYMBOL(msm_chg_battery_thermo);
-
-int msm_chg_charger_current(void)
-{
-	int rc = 0;
-	struct hsusb_start_req {
-		struct rpc_request_hdr hdr;
-	} req;
-	struct hsusb_rpc_rep {
-		struct rpc_reply_hdr hdr;
-		u32 charger_current;
-	} rep;
-
-	memset(&rep, 0, sizeof(rep));
-
-	if (!chg_ep || IS_ERR(chg_ep))
-		return -EAGAIN;
-
-	rc = msm_rpc_call_reply(chg_ep, chg_rpc_ids.chg_charger_current_proc,
-				&req, sizeof(req),
-				&rep, sizeof(rep), (5 * HZ));
-	if (rc < 0) {
-		printk(KERN_INFO "[RPC Check] msm_chg_charger_current() rc < 0\n");
-		pr_err("%s: rpc call failed! error: (%d)"
-				"proc id: (0x%08x)\n",
-				__func__, rc,
-				chg_rpc_ids.chg_charger_current_proc);
-		return rc;
-	}
-
-	return be32_to_cpu(rep.charger_current);
-}
-EXPORT_SYMBOL(msm_chg_charger_current);
-
-int msm_chg_qsd_thermo(void)
-{
-	int rc = 0;
-	struct hsusb_start_req {
-		struct rpc_request_hdr hdr;
-	} req;
-	struct hsusb_rpc_rep {
-		struct rpc_reply_hdr hdr;
-		u32 qsd_thermo;
-	} rep;
-
-	memset(&rep, 0, sizeof(rep));
-
-	if (!chg_ep || IS_ERR(chg_ep))
-		return -EAGAIN;
-
-	rc = msm_rpc_call_reply(chg_ep, chg_rpc_ids.chg_qsd_thermo_proc,
-				&req, sizeof(req),
-				&rep, sizeof(rep), (5 * HZ));
-	if (rc < 0) {
-		printk(KERN_INFO "[RPC Check] msm_chg_qsd_thermo() rc < 0\n");
-		pr_err("%s: rpc call failed! error: (%d)"
-				"proc id: (0x%08x)\n",
-				__func__, rc,
-				chg_rpc_ids.chg_qsd_thermo_proc);
-		return rc;
-	}
-
-	return be32_to_cpu(rep.qsd_thermo);
-}
-EXPORT_SYMBOL(msm_chg_qsd_thermo);
-
-int msm_chg_charger_thermo(void)
-{
-	int rc = 0;
-	struct hsusb_start_req {
-		struct rpc_request_hdr hdr;
-	} req;
-	struct hsusb_rpc_rep {
-		struct rpc_reply_hdr hdr;
-		u32 charger_thermo;
-	} rep;
-
-	memset(&rep, 0, sizeof(rep));
-
-	if (!chg_ep || IS_ERR(chg_ep))
-		return -EAGAIN;
-
-	rc = msm_rpc_call_reply(chg_ep, chg_rpc_ids.chg_charger_thermo_proc,
-				&req, sizeof(req),
-				&rep, sizeof(rep), (5 * HZ));
-	if (rc < 0) {
-		printk(KERN_INFO "[RPC Check] msm_chg_charger_thermo() rc < 0\n");
-		pr_err("%s: rpc call failed! error: (%d)"
-				"proc id: (0x%08x)\n",
-				__func__, rc,
-				chg_rpc_ids.chg_charger_thermo_proc);
-		return rc;
-	}
-
-	return be32_to_cpu(rep.charger_thermo);
-}
-EXPORT_SYMBOL(msm_chg_charger_thermo);
-
-#endif /* CONFIG_MACH_ES209RA */
+EXPORT_SYMBOL(hsusb_get_chg_current_ma);
