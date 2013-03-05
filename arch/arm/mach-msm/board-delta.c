@@ -970,24 +970,21 @@ static struct platform_device msm_fb_device = {
 	}
 };
 
+static void config_gpio_table(uint32_t *table, int len)
+{
+	int n, rc;
+	for (n = 0; n < len; n++) {
+		rc = gpio_tlmm_config(table[n], GPIO_ENABLE);
+		if (rc) {
+			printk(KERN_ERR "%s: gpio_tlmm_config(%#x)=%d\n",
+				__func__, table[n], rc);
+			break;
+		}
+	}
+}
+
 #ifdef CONFIG_BT
-static struct platform_device msm_bt_power_device = {
-	.name = "bt_power",
-};
-
-enum {
-	BT_RFR,
-	BT_CTS,
-	BT_RX,
-	BT_TX,
-	BT_PCM_DOUT,
-	BT_PCM_DIN,
-	BT_PCM_SYNC,
-	BT_PCM_CLK,
-	BT_EN,
-};
-
-static unsigned bt_config_power_on[] = {
+static uint32_t bt_config_on_gpios[] = {
 	GPIO_CFG(43, 2, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),	/* RFR */
 	GPIO_CFG(44, 2, GPIO_INPUT,  GPIO_NO_PULL, GPIO_2MA),	/* CTS */
 	GPIO_CFG(45, 2, GPIO_INPUT,  GPIO_NO_PULL, GPIO_2MA),	/* Rx */
@@ -998,7 +995,7 @@ static unsigned bt_config_power_on[] = {
 	GPIO_CFG(71, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),	/* PCM_CLK */
 	GPIO_CFG(90, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),	/* BT Enable */
 };
-static unsigned bt_config_power_off[] = {
+static uint32_t bt_config_off_gpios[] = {
 	GPIO_CFG(43, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),	/* RFR */
 	GPIO_CFG(44, 0, GPIO_INPUT,  GPIO_NO_PULL, GPIO_2MA),	/* CTS */
 	GPIO_CFG(45, 0, GPIO_INPUT,  GPIO_NO_PULL, GPIO_2MA),	/* Rx */
@@ -1012,49 +1009,22 @@ static unsigned bt_config_power_off[] = {
 
 static int bluetooth_power(int on)
 {
-   int pin, rc;
-   /* BT power controlled by gpio 90 in Robyn */
 	if (on) {
-		for (pin = 0; pin < ARRAY_SIZE(bt_config_power_on); pin++) {
-			rc = gpio_tlmm_config(bt_config_power_on[pin],
-					      GPIO_ENABLE);
-			if (rc) {
-				printk(KERN_ERR
-				       "%s: gpio_tlmm_config(%#x)=%d\n",
-				       __func__, bt_config_power_on[pin], rc);
-				return -EIO;
-			}
-		}
-
-      /* Enable BT */
-      gpio_set_value(90, 1);
+		config_gpio_table(bt_config_on_gpios,
+				  ARRAY_SIZE(bt_config_on_gpios));
+		gpio_set_value(90, 1);
 	} else {
-      /* Disable BT */
-      gpio_set_value(90, 0);
-
-		for (pin = 0; pin < ARRAY_SIZE(bt_config_power_off); pin++) {
-			rc = gpio_tlmm_config(bt_config_power_off[pin],
-					      GPIO_ENABLE);
-			if (rc) {
-				printk(KERN_ERR
-				       "%s: gpio_tlmm_config(%#x)=%d\n",
-				       __func__, bt_config_power_off[pin], rc);
-				return -EIO;
-			}
-		}
+		gpio_set_value(90, 0);
+		config_gpio_table(bt_config_off_gpios,
+				  ARRAY_SIZE(bt_config_off_gpios));
 	}
 	return 0;
 }
 
-static void __init bt_power_init(void)
-{
-	if (gpio_request(90, "bt_en"))
-		printk(KERN_ERR "failed to request gpio bt_en\n");
-
-	msm_bt_power_device.dev.platform_data = &bluetooth_power;
-}
-#else
-#define bt_power_init(x) do {} while (0)
+static struct platform_device delta_device_rfkill = {
+	.name = "delta-rfkill",
+	.dev.platform_data = &bluetooth_power,
+};
 #endif
 #ifdef CONFIG_ARCH_MSM7X27
 static struct resource kgsl_3d0_resources[] = {
@@ -1430,19 +1400,6 @@ static uint32_t camera_on_gpio_table[] = {
 	GPIO_CFG(15, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA), /* MCLK */
 	GPIO_CFG(117, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA), /* VCAMSD12_EN */
 };
-
-static void config_gpio_table(uint32_t *table, int len)
-{
-	int n, rc;
-	for (n = 0; n < len; n++) {
-		rc = gpio_tlmm_config(table[n], GPIO_ENABLE);
-		if (rc) {
-			printk(KERN_ERR "%s: gpio_tlmm_config(%#x)=%d\n",
-				__func__, table[n], rc);
-			break;
-		}
-	}
-}
 
 static void config_camera_on_gpios(void)
 {
@@ -2033,9 +1990,6 @@ static struct platform_device *devices[] __initdata = {
 	&msm_device_uart_dm2,
 	&cy8ctma300_ser_device,
 #endif
-#ifdef CONFIG_BT
-	&msm_bt_power_device,
-#endif
 	&msm_device_snd,
 	&msm_device_adspdec,
 #ifdef CONFIG_DLT001_CAMERA
@@ -2077,6 +2031,9 @@ static struct platform_device *devices[] __initdata = {
 #endif
 #ifdef CONFIG_SEMC_GPIO_EXTR
 	&semc_gpio_extr_device,
+#endif
+#ifdef CONFIG_BT
+	&delta_device_rfkill,
 #endif
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 	&ram_console_device,
@@ -2597,8 +2554,9 @@ static void __init msm7x2x_init(void)
 #endif
 	rmt_storage_add_ramfs();
 	msm7x2x_init_mmc();
-	bt_power_init();
-
+#ifdef CONFIG_BT
+	bluetooth_power(0);
+#endif
 #ifdef CONFIG_FB_MSM_MDDI
 	msm_mddi_semc_delta_display_init();
 #endif
