@@ -2,7 +2,7 @@
  * Cypress TrueTouch(TM) Standard Product I2C touchscreen driver.
  * drivers/input/touchscreen/cyttsp_i2c.c
  *
- * Copyright (C) 2009, 2010 Cypress Semiconductor, Inc.
+ * Copyright (C) 2009-2011 Cypress Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -43,17 +43,43 @@ struct cyttsp_i2c {
 static s32 ttsp_i2c_read_block_data(void *handle, u8 addr,
 	u8 length, void *values)
 {
+	int retval = 0;
 	struct cyttsp_i2c *ts = container_of(handle, struct cyttsp_i2c, ops);
-	return i2c_smbus_read_i2c_block_data(ts->client,
-		addr, length, values);
+	retval = i2c_master_send(ts->client, &addr, 1);
+	if (retval < 0)
+		return retval;
+	retval = i2c_master_recv(ts->client, values, length);
+
+	return (retval < 0) ? retval : 0;
 }
 
 static s32 ttsp_i2c_write_block_data(void *handle, u8 addr,
 	u8 length, const void *values)
 {
+	u8 data[I2C_SMBUS_BLOCK_MAX+1];
+	int num_bytes, count;
+	int retval;
 	struct cyttsp_i2c *ts = container_of(handle, struct cyttsp_i2c, ops);
-	return i2c_smbus_write_i2c_block_data(ts->client,
-		addr, length, values);
+	num_bytes = length;
+	data[0] = addr;
+	count = (num_bytes > I2C_SMBUS_BLOCK_MAX) ?
+		I2C_SMBUS_BLOCK_MAX : num_bytes;
+	memcpy(&data[1], values, count+1);
+	num_bytes -= count;
+	retval = i2c_master_send(ts->client, data, count+1);
+	if (retval < 0)
+		return retval;
+	while (num_bytes > 0) {
+		count = (num_bytes > I2C_SMBUS_BLOCK_MAX) ?
+			I2C_SMBUS_BLOCK_MAX : num_bytes;
+		memcpy(&data[0], values, count);
+		num_bytes -= count;
+		retval = i2c_master_send(ts->client, data, count);
+		if (retval < 0)
+			return retval;
+	}
+
+	return 0;
 }
 
 static s32 ttsp_i2c_tch_ext(void *handle, void *values)

@@ -1230,8 +1230,9 @@ static struct cyttsp_platform_data cypress_i2c_touch_data = {
 	.init = cyttsp_init,
 	.mt_sync = input_mt_sync,
 	/* TODO: maxx and maxy values should be retrieved from the firmware */
-	.maxx = 319,
-	.maxy = 479,
+	.maxx = CONFIG_TOUCHSCREEN_CYTTSP_MAX_X,
+	.maxy = CONFIG_TOUCHSCREEN_CYTTSP_MAX_Y,
+	.maxz = CONFIG_TOUCHSCREEN_CYTTSP_MAX_Z,
 	.flags = 0,
 	.gen = CY_GEN3,
 	.use_st = 0,

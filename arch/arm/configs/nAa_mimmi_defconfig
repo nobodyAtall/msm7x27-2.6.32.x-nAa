@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.32.60-nAa-04
-# Tue Feb 26 19:10:37 2013
+# Linux kernel version: 2.6.32.60-nAa-05
+# Wed Mar  6 22:42:00 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1185,6 +1185,7 @@ CONFIG_SERIAL_MSM_CLOCK_CONTROL=y
 # CONFIG_SERIAL_MSM_RX_WAKEUP is not set
 # CONFIG_SERIAL_MSM_HSL is not set
 CONFIG_SERIAL_MSM_HS=y
+CONFIG_SERIAL_MSM_HS_NO_DMA_WAKELOCK=y
 # CONFIG_SERIAL_BCM_BT_LPM is not set
 
 #
