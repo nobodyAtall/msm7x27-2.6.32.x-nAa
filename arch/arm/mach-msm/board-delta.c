@@ -103,10 +103,6 @@
 #ifdef CONFIG_LEDS_MSM_PMIC_FLASHLED
 #include <linux/leds-msm_pmic_flashled.h>
 #endif
-#ifdef CONFIG_SEMC_MSM_PMIC_VIBRATOR
-#include <mach/pmic.h>
-#include  <linux/semc/msm_pmic_vibrator.h>
-#endif
 #ifdef CONFIG_LEDS_MSM_PMIC_MISC
 #include <mach/pmic.h>
 #include <linux/leds-msm_pmic_misc.h>
@@ -549,45 +545,6 @@ static struct platform_device simcard_detect_device = {
 	.id = -1,
 	.dev = {
 		.platform_data = &simc_platform_data,
-	},
-};
-#endif
-
-#ifdef CONFIG_SEMC_MSM_PMIC_VIBRATOR
-static int msm7227_platform_set_vib_voltage(u16 volt_mv)
-{
-	int rc = pmic_vib_mot_set_volt(volt_mv);
-
-	if (rc)
-		printk(KERN_ERR "%s: Failed to set motor voltage\n", __func__);
-	return rc;
-}
-
-static int msm7227_platform_init_vib_hw(void)
-{
-	int rc = pmic_vib_mot_set_mode(PM_VIB_MOT_MODE__MANUAL);
-
-	if (rc) {
-		printk(KERN_ERR "%s: Failed to set pin mode\n", __func__);
-		return rc;
-	}
-	return pmic_vib_mot_set_volt(0);
-}
-
-static struct msm_pmic_vibrator_platform_data vibrator_platform_data = {
-	.min_voltage = 1200,
-	.max_voltage = 3100,
-	.off_voltage = 0,
-	.default_voltage = 3100,
-	.mimimal_on_time = 10,
-	.platform_set_vib_voltage = msm7227_platform_set_vib_voltage,
-	.platform_init_vib_hw = msm7227_platform_init_vib_hw,
-};
-static struct platform_device vibrator_device = {
-	.name = "msm_pmic_vibrator",
-	.id = -1,
-	.dev = {
-		.platform_data = &vibrator_platform_data,
 	},
 };
 #endif
@@ -2026,9 +1983,6 @@ static struct platform_device *devices[] __initdata = {
 #endif
 #ifdef CONFIG_MSM_SIM_CARD_DETECT
 	&simcard_detect_device,
-#endif
-#ifdef CONFIG_SEMC_MSM_PMIC_VIBRATOR
-	&vibrator_device,
 #endif
 #ifdef CONFIG_SEMC_GPIO_EXTR
 	&semc_gpio_extr_device,
