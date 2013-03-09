@@ -62,6 +62,8 @@
 /* TODO: To be activated when needed two-finger detection */
 /* #define TWO_FINGER_DETECTION */
 
+static int cfg_dt = 1;
+module_param(cfg_dt, int, 0764);
 
 /* The 2D data packet order is applicable for each finger detected. */
 enum rmi4_2D_data_pkt_index {
@@ -136,10 +138,10 @@ struct synaptics_ts_data {
 	int snap_up_off[2];
 	int snap_down[2];
 	int snap_up[2];
-	int xf;//edit
-	int yf;//edit
-	int xcenter;//edit
-	int ycenter;//edit
+	int xf;
+	int yf;
+	int xcenter;
+	int ycenter;
 	int finger2;
 	uint32_t flags;
 	int (*power)(int on);
@@ -308,6 +310,7 @@ static int synaptics_init_panel(struct synaptics_ts_data *ts)
 			__FUNCTION__);
 		return ret;
 	}
+
 	return ret;
 }
 
@@ -351,6 +354,9 @@ static void synaptics_2D_data_handler(struct synaptics_ts_data *ts)
 			__FUNCTION__);
 		return;
 	}
+	SYNA_DBG(for (i = 0; i < pkt_size; i++)
+		printk(KERN_INFO "%s: data[%d]:0x%x\n",
+			__FUNCTION__, i, pkt[i]);)
 
 	finger_state = pkt[0];
 	finger_state_mask = 0x03;
@@ -373,7 +379,7 @@ static void synaptics_2D_data_handler(struct synaptics_ts_data *ts)
 		f_data[i].y |= ((pkt[pkt_offset + PKT_INDX_2D_Y_POS_11__4]
 			<< 4) & 0x0FF0);
 		f_data[i].z = pkt[pkt_offset + PKT_INDX_2D_Z];
-		// Setting width to the highest axis-value 
+		/* Setting width to the highest axis-value */
 		f_data[i].w =
 			((pkt[pkt_offset + PKT_INDX_2D_WIDTH_XY] & 0x0F) >=
 			(pkt[pkt_offset + PKT_INDX_2D_WIDTH_XY] & 0xF0) >> 4) ?
@@ -399,20 +405,23 @@ static void synaptics_2D_data_handler(struct synaptics_ts_data *ts)
 		pkt_offset += NBR_OF_2D_DATA_REGS_PER_FINGER;
 	}
 
-
-	if ( f_data[0].w >= 0xa ) {
+	if (cfg_dt) {
+		if ( f_data[0].w >= 0xa ) {
+			ts->finger2 = 1;
+			//ts->xf = f_data[0].x;
+		}
+		if ( f_data[0].w > 4 && f_data[0].z > 70 ) {
+			ts->finger2 = 1;
+		}
+		if ( f_data[0].w < 6 && f_data[0].z < 70) {
+			ts->finger2 = 0;
+			//ts->xf = f_data[0].x;
+			//ts->yf = f_data[0].y;
+		}
+	}
+	else
 		ts->finger2 = 1;
-		//ts->xf = f_data[0].x;
-	}
-	if ( f_data[0].w > 4 && f_data[0].z > 70 ) {
-		ts->finger2 = 1;
-	}
-	if ( f_data[0].w < 6 && f_data[0].z < 70) {
-		ts->finger2 = 0;
-		//ts->xf = f_data[0].x;
-		//ts->yf = f_data[0].y;
-	}
-//y
+	//y
 	if ( f_data[0].y < ts->ycenter) {
 		int yy = ts->ycenter - f_data[0].y;
 		ts->yf = ts->ycenter + yy;
@@ -428,7 +437,7 @@ static void synaptics_2D_data_handler(struct synaptics_ts_data *ts)
 	if ( ts->yf >= ts->info_2D.max_y ) {
 		ts->yf = ts->info_2D.max_y;
 	}
-//x
+	//x
 	if ( f_data[0].x < ts->xcenter) {
 		int xx = ts->xcenter - f_data[0].x;
 		ts->xf = ts->xcenter + xx;
@@ -444,8 +453,9 @@ static void synaptics_2D_data_handler(struct synaptics_ts_data *ts)
 	if ( ts->xf >= ts->info_2D.max_x ) {
 		ts->xf = ts->info_2D.max_x;
 	}
+
+	/* press- or release to be masked out on finger_0. */
 	finger_state_mask = 0x01;
-		
 	if (finger_state & finger_state_mask) {
 		input_report_abs(ts->input_dev, ABS_X, f_data[0].x);
 		input_report_abs(ts->input_dev, ABS_Y, f_data[0].y);
@@ -458,21 +468,23 @@ static void synaptics_2D_data_handler(struct synaptics_ts_data *ts)
 	input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, f_data[0].z);
 	input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, f_data[0].w);
 	input_report_key(ts->input_dev, BTN_TOUCH,(finger_state & finger_state_mask));
-	input_mt_sync(ts->input_dev);
-	if ( ts->finger2 == 1 ) {	
-		if (finger_state & finger_state_mask) {
-			input_report_abs(ts->input_dev, ABS_HAT0X, ts->xf);
-			input_report_abs(ts->input_dev, ABS_HAT0Y, ts->yf);
-			input_report_abs(ts->input_dev, ABS_MT_POSITION_X, ts->xf);
-			input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, ts->yf);
-			input_report_abs(ts->input_dev, ABS_MT_PRESSURE, f_data[0].z);
-		}
-		input_report_abs(ts->input_dev, ABS_PRESSURE, f_data[0].z);
-		input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, f_data[0].w);
-		input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, f_data[0].z);
-		input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, f_data[0].w);
-		input_report_key(ts->input_dev, BTN_2,(finger_state & finger_state_mask));
+	if (cfg_dt) {	
 		input_mt_sync(ts->input_dev);
+		if ( ts->finger2 == 1 ) {	
+			if (finger_state & finger_state_mask) {
+				input_report_abs(ts->input_dev, ABS_HAT0X, ts->xf);
+				input_report_abs(ts->input_dev, ABS_HAT0Y, ts->yf);
+				input_report_abs(ts->input_dev, ABS_MT_POSITION_X, ts->xf);
+				input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, ts->yf);
+				input_report_abs(ts->input_dev, ABS_MT_PRESSURE, f_data[0].z);
+			}
+			input_report_abs(ts->input_dev, ABS_PRESSURE, f_data[0].z);
+			input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, f_data[0].w);
+			input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, f_data[0].z);
+			input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, f_data[0].w);
+			input_report_key(ts->input_dev, BTN_2,(finger_state & finger_state_mask));
+			input_mt_sync(ts->input_dev);
+		}
 	}
 	input_sync(ts->input_dev);
 }
@@ -518,7 +530,7 @@ static int synaptics_ts_do_bist
 		goto err_bist_failed;
 	}
 
-	/* RunBIST F08_BIST_Cmd0 (bit0) = 0x01 */
+	/* RunBIST F08_BIST_Cmd0 (bit0) = 0x00 */
 	ret = i2c_smbus_write_byte_data(client,
 		F08_BIST_CMD00_BIST_COMMAND(ts->rmi4_func), 0x00);
 	if (ret < 0) {
@@ -680,7 +692,6 @@ static struct file_operations synaptics_ts_fops = {
 
 static void synaptics_ts_work_func(struct work_struct *work)
 {
-
 	int ret;
 	uint8_t buf[2];
 	uint8_t device_status;
@@ -690,15 +701,15 @@ static void synaptics_ts_work_func(struct work_struct *work)
 
 	ret = i2c_smbus_read_i2c_block_data(ts->client,
 		F01_RMI_DATA00_DEVICE_STATUS(ts->rmi4_func), sizeof(buf), buf);
-	//if (ret < 0) {
-	//	printk(KERN_ERR "%s: Error, Failed reading packet\n",
-	//		__FUNCTION__);
-	//	goto exit_work_function;
-	//}
+	/*if (ret < 0) {
+		printk(KERN_ERR "%s: Error, Failed reading packet\n",
+			__FUNCTION__);
+		goto exit_work_function;
+	}*/
 	device_status = buf[0];
 	interrupt_status = buf[1];
-	//printk(KERN_INFO "%s: dev_status:0x%02X int_status:0x%02X\n",
-	//		__FUNCTION__, device_status, interrupt_status);
+	SYNA_DBG(printk(KERN_INFO "%s: dev_status:0x%02X int_status:0x%02X\n",
+			__FUNCTION__, device_status, interrupt_status);)
 
 	if (ts->use_irq) {
 		if (interrupt_status & SYNA_F01_RMI_INT_SOURCE_MASK_STATUS) {
@@ -861,8 +872,8 @@ static int synaptics_ts_probe(
 	max_y = ts->info_2D.max_y;
 	if (ts->flags & SYNAPTICS_SWAP_XY)
 		synpatics_swap(max_x, max_y);
-	ts->ycenter = ts->info_2D.max_y / 2;
-	ts->xcenter = ts->info_2D.max_x / 2;
+		ts->ycenter = ts->info_2D.max_y / 2;
+		ts->xcenter = ts->info_2D.max_x / 2;
 	/* TODO: check how this is applicable to the RMI4.0 configuration */
 	panel_version = ts->info_2D.manufact_id << 8;
 	panel_version |= ts->info_2D.firmware_rev;
@@ -964,13 +975,14 @@ static int synaptics_ts_probe(
 	input_set_abs_params(ts->input_dev, ABS_HAT0X, -inactive_area_left, max_x + inactive_area_right, fuzz_x, 0);
 	input_set_abs_params(ts->input_dev, ABS_HAT0Y, -inactive_area_top, max_y + inactive_area_bottom, fuzz_y, 0);
 
-	// dx : we have mt support
-	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, -1, max_x + 1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, -1, max_y + 1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, fuzz_p, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0, 255, fuzz_w, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, 255, 0, 0);
-
+	if (cfg_dt) {
+		// dx : we have mt support
+		input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, -1, max_x + 1, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, -1, max_y + 1, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, fuzz_p, 0);
+		input_set_abs_params(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0, 255, fuzz_w, 0);
+		input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, 255, 0, 0);
+	}
 	ret = input_register_device(ts->input_dev);
 	if (ret) {
 		printk(KERN_ERR "synaptics_ts_probe: Unable to register %s input device\n", ts->input_dev->name);
