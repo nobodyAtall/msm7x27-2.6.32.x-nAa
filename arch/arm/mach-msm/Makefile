@@ -156,9 +156,9 @@ obj-$(CONFIG_MOGAMI_VIBRATOR) += vibrator-mogami.o
 obj-$(CONFIG_MACH_SEMC_PHOENIX) += board-semc_zeus.o keypad-zeus.o board-semc_zeus-wifi.o board-semc_zeus-rfkill.o
 
 ifdef CONFIG_COMPAT_WIRELESS
-obj-$(CONFIG_ARCH_MSM7X27) += board-delta.o generic_gpio.o devices-msm7x27.o msm_vibrator.o board-semc_delta-wifi.o board-semc_delta-rfkill.o
+obj-$(CONFIG_ARCH_MSM7X27) += board-delta.o generic_gpio.o devices-msm7x27.o vibrator-delta.o board-semc_delta-wifi.o board-semc_delta-rfkill.o
 else
-obj-$(CONFIG_ARCH_MSM7X27) += board-delta.o generic_gpio.o devices-msm7x27.o msm_vibrator.o board-semc_delta-rfkill.o
+obj-$(CONFIG_ARCH_MSM7X27) += board-delta.o generic_gpio.o devices-msm7x27.o vibrator-delta.o board-semc_delta-rfkill.o
 endif
 obj-$(CONFIG_MACH_MSM7X27_ROBYN) += board-robyn-keypad.o
 obj-$(CONFIG_MACH_MSM7X27_MIMMI) += board-mimmi-keypad.o

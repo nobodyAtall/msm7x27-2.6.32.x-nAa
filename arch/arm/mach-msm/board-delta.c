@@ -2312,6 +2312,8 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 	return 0;
 }
 
+extern void msm_init_pmic_vibrator(void);
+
 #ifdef CONFIG_COMPAT_WIRELESS
 extern int delta_wifi_power(int on);
 
@@ -2497,6 +2499,7 @@ static void __init msm7x2x_init(void)
 	config_camera_off_gpios(); /* might not be necessary */
 #endif
 	msm_device_i2c_init();
+	msm_init_pmic_vibrator();
 	i2c_register_board_info(0, i2c_devices, ARRAY_SIZE(i2c_devices));
 
 	platform_device_register(get_keypad_device_delta());
