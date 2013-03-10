@@ -985,6 +985,8 @@ int update_console_cmdline(char *name, int idx, char *name_new, int idx_new, cha
 }
 
 int console_suspend_enabled = 1;
+module_param(console_suspend_enabled, int, 0644);
+
 EXPORT_SYMBOL(console_suspend_enabled);
 
 static int __init console_suspend_disable(char *str)
