@@ -419,6 +419,49 @@ static struct platform_device android_usb_device = {
 		.platform_data = &android_usb_pdata,
 		},
 };
+
+static int __init board_serialno_setup(char *serialno)
+{
+	int ix, len, i;
+	static char usb_serial_number[21];
+	char *src = serialno;
+
+	/* create a MAC address from our serial number.
+	 * first byte is 0x02 to signify locally administered.
+	 */
+	rndis_pdata.ethaddr[0] = 0x02;
+	for (i = 0; *src; i++) {
+		/* XOR the USB serial across the remaining bytes */
+		rndis_pdata.ethaddr[i % (ETH_ALEN - 1) + 1] ^= *src++;
+	}
+
+	/* The USB mass storage spec states in section 4.1.2 that
+	 * the serial number may only contain characters '0' to '9'
+	 * and 'A' to 'F'. With this change the serial is instead
+	 * generated from the hex value of the individual chars
+	 * in the phone's serial number.
+	 */
+	len = strlen(serialno);
+	ix = 0;
+	while (ix < 20) {
+		if (*serialno && ix >= 20 - (len << 1)) {
+			sprintf(&usb_serial_number[ix], "%02X",
+					(unsigned char)*serialno);
+			serialno++;
+		} else {
+			sprintf(&usb_serial_number[ix], "%02X", 0);
+		}
+		ix += 2;
+	}
+	usb_serial_number[20] = '\0';
+	android_usb_pdata.serial_number = usb_serial_number;
+	mass_storage_pdata.serial_number = usb_serial_number;
+
+	printk(KERN_INFO "USB serial number: %s\n",
+			android_usb_pdata.serial_number);
+	return 1;
+}
+__setup("serialno=", board_serialno_setup);
 #endif
 
 #if defined(CONFIG_LEDS_MSM_PMIC_FLASHLED)
@@ -2621,22 +2664,6 @@ static int __init startup_reason_setup(char *str)
 	return 1;
 }
 __setup("startup=", startup_reason_setup);
-
-static int __init board_serialno_setup(char *serialno)
-{
-#ifdef CONFIG_USB_ANDROID
-	int i;
-	char *src = serialno;
-	android_usb_pdata.serial_number = serialno;
-	printk(KERN_INFO "USB serial number: %s\n", android_usb_pdata.serial_number);
-
-	rndis_pdata.ethaddr[0] = 0x02;
-	for (i = 0; *src; i++)
-		rndis_pdata.ethaddr[i % (ETH_ALEN -1)+1] ^= *src++;
-#endif
-	return 1;
-}
-__setup_param("serialno=", board_serialno_setup_1, board_serialno_setup, 0);
 
 MACHINE_START(MSM7X27_SURF, "SEMC Delta")
 #ifdef CONFIG_MSM_DEBUG_UART
