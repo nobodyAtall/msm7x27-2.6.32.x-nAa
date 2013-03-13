@@ -20,6 +20,7 @@
 #include <linux/hrtimer.h>
 #include <linux/interrupt.h>
 #include <linux/wakelock.h>
+#include <mach/gpio.h>
 
 struct gpio_kp {
 	struct gpio_event_input_devs *input_devs;
@@ -233,7 +234,7 @@ static irqreturn_t gpio_keypad_irq_handler(int irq_in, void *dev_id)
 			gpio_direction_input(mi->output_gpios[i]);
 	}
 	wake_lock(&kp->wake_lock);
-	hrtimer_start(&kp->timer, ktime_set(0, 10000), HRTIMER_MODE_REL);
+	hrtimer_start(&kp->timer, ktime_set(0, 0), HRTIMER_MODE_REL);
 	return IRQ_HANDLED;
 }
 
@@ -271,7 +272,7 @@ static int gpio_keypad_request_irqs(struct gpio_kp *kp)
 				"irq %d\n", mi->input_gpios[i], irq);
 			goto err_request_irq_failed;
 		}
-		disable_irq_nosync(irq);
+		disable_irq(irq);
 	}
 	return 0;
 
@@ -388,8 +389,7 @@ int semc_gpio_event_matrix_func(struct gpio_event_input_devs *input_devs,
 
 		if (kp->use_irq)
 			wake_lock(&kp->wake_lock);
-		hrtimer_start(&kp->timer, ktime_set(0, 10000),
-				 HRTIMER_MODE_REL);
+		hrtimer_start(&kp->timer, ktime_set(0, 0), HRTIMER_MODE_REL);
 
 		return 0;
 	}

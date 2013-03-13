@@ -168,8 +168,10 @@ static int mimmi_matrix_event(struct gpio_event_input_devs *input_devs,
 	DBG(printk(KERN_DEBUG "%s: code %d value %d\n", __func__, code, value);)
 
 	if (atomic_read(&keyboard_closed)) {
-		if (is_a_button(code))
+		if (is_a_button(code)) {
 			input_report_key(input_dev, code, value);
+			input_sync(input_dev);
+		}
 		else
 			DBG(printk(KERN_DEBUG "%s: KBD is closed,"
 				" ignoring code %d\n", __func__, code);)
@@ -202,6 +204,7 @@ static int mimmi_matrix_event(struct gpio_event_input_devs *input_devs,
 			   __func__, code, value);)
 	}
 	input_report_key(input_dev, code, value);
+	input_sync(input_dev);
 	return 0;
 }
 
@@ -243,7 +246,7 @@ static struct gpio_event_matrix_info mimmi_keypad_matrix_info = {
 	.input_gpios	= keypad_col_gpios,
 	.noutputs	= ARRAY_SIZE(keypad_row_gpios),
 	.ninputs	= ARRAY_SIZE(keypad_col_gpios),
-	.settle_time.tv.nsec = 0,
+	.settle_time.tv.nsec = 40 * NSEC_PER_USEC,
 	.poll_time.tv.nsec = 20 * NSEC_PER_MSEC,
 	.flags		= GPIOKPF_LEVEL_TRIGGERED_IRQ |
 			  GPIOKPF_PRINT_UNMAPPED_KEYS
@@ -261,6 +264,7 @@ static int mimmi_input_event(struct gpio_event_input_devs *input_devs,
 	configure_wakeup_inputs(value ? wakeup_inputs_kbd_closed
 				: wakeup_inputs_kbd_opened);
 	input_event(input_devs->dev[dev], type, code, value);
+	input_sync(input_devs->dev[dev]);
 	return 0;
 }
 
