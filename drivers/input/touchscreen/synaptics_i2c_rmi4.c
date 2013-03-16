@@ -62,7 +62,7 @@
 /* TODO: To be activated when needed two-finger detection */
 /* #define TWO_FINGER_DETECTION */
 
-static int cfg_dt = 0;
+static int cfg_dt = 1;
 module_param(cfg_dt, int, 0764);
 
 /* The 2D data packet order is applicable for each finger detected. */
