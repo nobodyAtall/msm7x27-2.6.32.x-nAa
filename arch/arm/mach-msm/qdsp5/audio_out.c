@@ -92,7 +92,7 @@ module_init(_pcm_log_init);
 
 
 
-#define BUFSZ (960 * 5)
+#define BUFSZ (960 * 5 * 2)
 #define DMASZ (BUFSZ * 2)
 
 #define COMMON_OBJ_ID 6
