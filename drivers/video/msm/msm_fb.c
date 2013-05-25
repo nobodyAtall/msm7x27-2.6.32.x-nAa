@@ -123,6 +123,10 @@ int msm_fb_debugfs_file_index;
 struct dentry *msm_fb_debugfs_root;
 struct dentry *msm_fb_debugfs_file[MSM_FB_MAX_DBGFS];
 
+// nAa: compatibility with gingerbread copybits
+static int cfg_compat = 0;
+module_param(cfg_compat, int, 0764);
+
 struct dentry *msm_fb_get_debugfs_root(void)
 {
 	if (msm_fb_debugfs_root == NULL)
@@ -2236,6 +2240,108 @@ static int msmfb_blit(struct fb_info *info, void __user *p)
 	return 0;
 }
 
+void map_mdp_img(struct mdp_img_gb * gb, struct mdp_img * a) {
+	a->width = gb->width;
+	a->height = gb->height;
+	a->format = gb->format;
+	a->offset = gb->offset;
+	a->memory_id = gb->memory_id;
+}
+
+void map_mdp_blit_req(struct mdp_blit_req_gb * gb, struct mdp_blit_req * a) {
+	map_mdp_img(&gb->src, &a->src);
+	map_mdp_img(&gb->dst, &a->dst);
+	a->src_rect = gb->src_rect;
+	a->dst_rect = gb->dst_rect;
+	a->alpha = gb->alpha;
+	a->transp_mask = gb->transp_mask;
+	a->flags = gb->flags;
+	a->sharpening_strength = gb->sharpening_strength;
+}
+
+static int msmfb_blit_gb(struct fb_info *info, void __user *p)
+{
+	/*
+	 * CAUTION: The names of the struct types intentionally *DON'T* match
+	 * the names of the variables declared -- they appear to be swapped.
+	 * Read the code carefully and you should see that the variable names
+	 * make sense.
+	 */
+	const int MAX_LIST_WINDOW = 16;
+	struct mdp_blit_req_gb req_list[MAX_LIST_WINDOW];
+	struct mdp_blit_req_list_gb req_list_header;
+	struct mdp_blit_req req_temp;
+
+	int count, i, req_list_count;
+
+	/* Get the count size for the total BLIT request. */
+	if (copy_from_user(&req_list_header, p, sizeof(req_list_header)))
+		return -EFAULT;
+	p += sizeof(req_list_header);
+	count = req_list_header.count;
+	while (count > 0) {
+		/*
+		 * Access the requests through a narrow window to decrease copy
+		 * overhead and make larger requests accessible to the
+		 * coherency management code.
+		 * NOTE: The window size is intended to be larger than the
+		 *       typical request size, but not require more than 2
+		 *       kbytes of stack storage.
+		 */
+		req_list_count = count;
+		if (req_list_count > MAX_LIST_WINDOW)
+			req_list_count = MAX_LIST_WINDOW;
+		if (copy_from_user(&req_list, p,
+				sizeof(struct mdp_blit_req_gb)*req_list_count))
+			return -EFAULT;
+
+		/*
+		 * Ensure that any data CPU may have previously written to
+		 * internal state (but not yet committed to memory) is
+		 * guaranteed to be committed to memory now.
+		 */
+		/*msm_fb_ensure_memory_coherency_before_dma(info,
+				req_list, req_list_count);*/
+		dmb();
+
+		/*
+		 * Do the blit DMA, if required -- returning early only if
+		 * there is a failure.
+		 */
+		for (i = 0; i < req_list_count; i++) {
+			if (!(req_list[i].flags & MDP_NO_BLIT)) {
+				/* Do the actual blit. */
+				int ret = 0;
+				map_mdp_blit_req(&(req_list[i]), &req_temp);
+				ret = mdp_blit(info, &req_temp);
+
+				/*
+				 * Note that early returns don't guarantee
+				 * memory coherency.
+				 */
+				if (ret)
+					return ret;
+			}
+		}
+
+		/*
+		 * Ensure that CPU cache and other internal CPU state is
+		 * updated to reflect any change in memory modified by MDP blit
+		 * DMA.
+		 */
+		/*msm_fb_ensure_memory_coherency_after_dma(info,
+				req_list,
+				req_list_count);*/
+		dmb();
+
+		/* Go to next window of requests. */
+		count -= req_list_count;
+		p += sizeof(struct mdp_blit_req_gb)*req_list_count;
+	}
+	return 0;
+}
+
+
 #ifdef CONFIG_FB_MSM_OVERLAY
 static int msmfb_overlay_get(struct fb_info *info, void __user *p)
 {
@@ -2454,7 +2560,10 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 #endif
 	case MSMFB_BLIT:
 		down(&msm_fb_ioctl_ppp_sem);
-		ret = msmfb_blit(info, argp);
+		if (cfg_compat)
+			ret = msmfb_blit_gb(info, argp);
+		else
+			ret = msmfb_blit(info, argp);
 		up(&msm_fb_ioctl_ppp_sem);
 
 		break;

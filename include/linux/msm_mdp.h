@@ -175,6 +175,14 @@ struct mdp_img {
 	uint32_t priv;
 };
 
+struct mdp_img_gb {
+	uint32_t width;
+	uint32_t height;
+	uint32_t format;
+	uint32_t offset;
+	int memory_id;		/* the file descriptor */
+};
+
 /*
  * {3x3} + {3} ccs matrix
  */
@@ -218,9 +226,25 @@ struct mdp_blit_req {
 	int sharpening_strength;  /* -127 <--> 127, default 64 */
 };
 
+struct mdp_blit_req_gb {
+	struct mdp_img_gb src;
+	struct mdp_img_gb dst;
+	struct mdp_rect src_rect;
+	struct mdp_rect dst_rect;
+	uint32_t alpha;
+	uint32_t transp_mask;
+	uint32_t flags;
+	int sharpening_strength;  /* -127 <--> 127, default 64 */
+};
+
 struct mdp_blit_req_list {
 	uint32_t count;
 	struct mdp_blit_req req[];
+};
+
+struct mdp_blit_req_list_gb {
+	uint32_t count;
+	struct mdp_blit_req_gb req[];
 };
 
 #define MSMFB_DATA_VERSION 2
