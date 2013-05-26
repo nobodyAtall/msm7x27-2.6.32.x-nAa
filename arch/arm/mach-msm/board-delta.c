@@ -2295,7 +2295,7 @@ static void msm_sdcc_setup_gpio(int dev_id, unsigned int enable)
 	}
 }
 
-static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
+uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 {
 	int rc = 0;
 	struct platform_device *pdev;
@@ -2354,14 +2354,34 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 	set_bit(pdev->id, &vreg_sts);
 	return 0;
 }
+EXPORT_SYMBOL(msm_sdcc_setup_power);
 
 extern void msm_init_pmic_vibrator(void);
 
-#ifdef CONFIG_COMPAT_WIRELESS
-extern int delta_wifi_power(int on);
+static int delta_wifi_power_state;
+#define DELTA_WIFI_PMENA_GPIO	93  //delta
+
+int delta_wifi_power(int on)
+{
+	if (on && (on == delta_wifi_power_state))
+		return 0;
+	if (on) {
+		gpio_set_value(DELTA_WIFI_PMENA_GPIO, 1);
+		mdelay(15);
+		gpio_set_value(DELTA_WIFI_PMENA_GPIO, 0);
+		mdelay(1);
+		gpio_set_value(DELTA_WIFI_PMENA_GPIO, 1);
+		mdelay(70);
+	} else {
+		gpio_set_value(DELTA_WIFI_PMENA_GPIO, 0);
+	}
+	delta_wifi_power_state = on;
+	return 0;
+}
+EXPORT_SYMBOL(delta_wifi_power);
 
 /* Wifi chip power control */
-static uint32_t wifi_setup_power(struct device *dv, unsigned int vdd)
+uint32_t wifi_setup_power(struct device *dv, unsigned int vdd)
 {
 	uint32_t ret = msm_sdcc_setup_power(dv, vdd);
 	if (vdd)
@@ -2370,7 +2390,7 @@ static uint32_t wifi_setup_power(struct device *dv, unsigned int vdd)
 		delta_wifi_power(0);
 	return ret;
 }
-#endif
+EXPORT_SYMBOL(wifi_setup_power);
 
 static unsigned int robyn_sdcc_slot_status(struct device *dev)
 {
@@ -2395,24 +2415,6 @@ static struct mmc_platform_data msm7x27_sdcc_data1 = {
 	.nonremovable	= 0,
 };
 
-#ifdef CONFIG_COMPAT_WIRELESS
-static struct mmc_platform_data msm7x27_sdcc_data2 = {
-	.ocr_mask = MMC_VDD_28_29,
-	.translate_vdd = wifi_setup_power,
-	.mmc_bus_width = MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD,
-	.sdiowakeup_irq = MSM_GPIO_TO_INT(66),
-	.msmsdcc_fmin = 144000,
-	.msmsdcc_fmid = 24576000,
-	.msmsdcc_fmax = 49152000,
-	.nonremovable = 1,
-};
-#else
-static struct mmc_platform_data msm7x27_sdcc_data2 = {
-	.ocr_mask	= MMC_VDD_28_29,
-	.translate_vdd	= msm_sdcc_setup_power,
-};
-#endif
-
 static void __init msm7x2x_init_mmc(void)
 {
 	vreg_mmc = vreg_get(NULL, "gp6");
@@ -2427,9 +2429,6 @@ static void __init msm7x2x_init_mmc(void)
 	msm_add_sdcc(1, &msm7x27_sdcc_data1);
 #endif
 
-#ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
-	msm_add_sdcc(2, &msm7x27_sdcc_data2);
-#endif
 }
 
 static struct msm_pm_platform_data msm7x27_pm_data[MSM_PM_SLEEP_MODE_NR] = {
