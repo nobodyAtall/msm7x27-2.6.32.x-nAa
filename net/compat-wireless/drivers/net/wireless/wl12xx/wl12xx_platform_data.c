@@ -4,7 +4,7 @@
 
 static const struct wl12xx_platform_data *platform_data;
 
-int __init wl12xx_set_platform_data(const struct wl12xx_platform_data *data)
+int wl12xx_set_platform_data(const struct wl12xx_platform_data *data)
 {
 	if (platform_data)
 		return -EBUSY;
@@ -17,6 +17,7 @@ int __init wl12xx_set_platform_data(const struct wl12xx_platform_data *data)
 
 	return 0;
 }
+EXPORT_SYMBOL(wl12xx_set_platform_data);
 
 const struct wl12xx_platform_data *wl12xx_get_platform_data(void)
 {
