@@ -542,7 +542,26 @@ static struct resource resources_sdc2[] = {
 		.end	= MSM_SDC2_BASE + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
+	{
+		.start	= INT_SDC2_0,
+		.end	= INT_SDC2_1,
+		.flags	= IORESOURCE_IRQ,
+		.name	= "irq",
+	},
+	{
+		.start	= 8,
+		.end	= 8,
+		.flags	= IORESOURCE_DMA,
+	},
+};
+
 #ifdef CONFIG_TI1271
+static struct resource resources_sdc2_TIWLAN[] = {
+	{
+		.start	= MSM_SDC2_BASE,
+		.end	= MSM_SDC2_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
 	{
 		.start	= INT_SDC2_0,
 		.end	= INT_SDC2_0,
@@ -559,20 +578,13 @@ static struct resource resources_sdc2[] = {
 		.flags	= IORESOURCE_IRQ | IORESOURCE_DISABLED,
 		.name	= "status_irq",
 	},
-#else
-	{
-		.start	= INT_SDC2_0,
-		.end	= INT_SDC2_1,
-		.flags	= IORESOURCE_IRQ,
-		.name	= "irq",
-	},
-#endif /*CONFIG_TI1271*/
 	{
 		.start	= 8,
 		.end	= 8,
 		.flags	= IORESOURCE_DMA,
 	},
 };
+#endif /*CONFIG_TI1271*/
 
 static struct resource resources_sdc3[] = {
 	{
@@ -643,11 +655,7 @@ struct platform_device msm_device_sdc1 = {
 };
 
 struct platform_device msm_device_sdc2 = {
-#ifdef CONFIG_TI1271
-	.name		= "TIWLAN_SDIO",
-#else
 	.name		= "msm_sdcc",
-#endif /*CONFIG_TI1271*/
 	.id		= 2,
 	.num_resources	= ARRAY_SIZE(resources_sdc2),
 	.resource	= resources_sdc2,
@@ -655,6 +663,18 @@ struct platform_device msm_device_sdc2 = {
 		.coherent_dma_mask	= 0xffffffff,
 	},
 };
+
+#ifdef CONFIG_TI1271
+struct platform_device msm_device_sdc2_TIWLAN = {
+	.name		= "TIWLAN_SDIO",
+	.id		= 2,
+	.num_resources	= ARRAY_SIZE(resources_sdc2_TIWLAN),
+	.resource	= resources_sdc2_TIWLAN,
+	.dev		= {
+		.coherent_dma_mask	= 0xffffffff,
+	},
+};
+#endif
 
 struct platform_device msm_device_sdc3 = {
 	.name		= "msm_sdcc",
@@ -676,14 +696,17 @@ struct platform_device msm_device_sdc4 = {
 	},
 };
 
-static struct platform_device *msm_sdcc_devices[] __initdata = {
+static struct platform_device *msm_sdcc_devices[] = {
 	&msm_device_sdc1,
 	&msm_device_sdc2,
+#ifdef CONFIG_TI1271
+	&msm_device_sdc2_TIWLAN,
+#endif
 	&msm_device_sdc3,
 	&msm_device_sdc4,
 };
 
-int __init msm_add_sdcc(unsigned int controller, struct mmc_platform_data *plat)
+int msm_add_sdcc(unsigned int controller, struct mmc_platform_data *plat)
 {
 	struct platform_device	*pdev;
 
@@ -694,6 +717,7 @@ int __init msm_add_sdcc(unsigned int controller, struct mmc_platform_data *plat)
 	pdev->dev.platform_data = plat;
 	return platform_device_register(pdev);
 }
+EXPORT_SYMBOL(msm_add_sdcc);
 
 #define RAMFS_INFO_MAGICNUMBER		0x654D4D43
 #define RAMFS_INFO_VERSION		0x00000001
@@ -1044,13 +1068,10 @@ struct clk msm_clocks_7x27[] = {
 	CLK_PCOM("sdac_clk",	SDAC_CLK,	NULL, OFF),
 	CLK_PCOM("sdc_clk",	SDC1_CLK,	&msm_device_sdc1.dev, OFF),
 	CLK_PCOM("sdc_pclk",	SDC1_P_CLK,	&msm_device_sdc1.dev, OFF),
-#ifdef CONFIG_TI1271
-	CLK_PCOM("sdc2_clk",	SDC2_CLK,	&msm_device_sdc2.dev, OFF),
-	CLK_PCOM("sdc2_pclk",	SDC2_P_CLK,	&msm_device_sdc2.dev, OFF),
-#else
 	CLK_PCOM("sdc_clk",	SDC2_CLK,	&msm_device_sdc2.dev, OFF),
 	CLK_PCOM("sdc_pclk",	SDC2_P_CLK,	&msm_device_sdc2.dev, OFF),
-#endif
+	CLK_PCOM("sdc_clk",	SDC2_CLK,	&msm_device_sdc2_TIWLAN.dev, OFF),
+	CLK_PCOM("sdc_pclk",	SDC2_P_CLK,	&msm_device_sdc2_TIWLAN.dev, OFF),
 	CLK_PCOM("sdc_clk",	SDC3_CLK,	&msm_device_sdc3.dev, OFF),
 	CLK_PCOM("sdc_pclk",	SDC3_P_CLK,	&msm_device_sdc3.dev, OFF),
 	CLK_PCOM("sdc_clk",	SDC4_CLK,	&msm_device_sdc4.dev, OFF),
