@@ -1150,7 +1150,7 @@ int msmsdcc_probe(struct platform_device *pdev)
 	/*
 	 * Setup main peripheral bus clock
 	 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 32)
 	host->pclk = clk_get(&pdev->dev, "sdc2_pclk");
 #else
 	host->pclk = clk_get(&pdev->dev, "sdc_pclk");
@@ -1170,7 +1170,7 @@ int msmsdcc_probe(struct platform_device *pdev)
 	/*
 	 * Setup SDC MMC clock
 	 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 32)
 	host->clk = clk_get(&pdev->dev, "sdc2_clk");
 #else
 	host->clk = clk_get(&pdev->dev, "sdc_clk");
