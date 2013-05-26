@@ -51,6 +51,7 @@ obj-$(CONFIG_IP_SCTP)		+= sctp/
 obj-$(CONFIG_RDS)		+= rds/
 ifneq ($(CONFIG_COMPAT_WIRELESS),)
 obj-$(CONFIG_COMPAT_WIRELESS)   += compat-wireless/
+obj-$(CONFIG_WIRELESS_EXT) += wireless/wext.o
 else
 obj-$(CONFIG_MAC80211)		+= mac80211/
 obj-$(CONFIG_WIRELESS)		+= wireless/
