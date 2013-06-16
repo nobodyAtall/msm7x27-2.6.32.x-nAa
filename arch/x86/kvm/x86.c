@@ -925,6 +925,12 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, u32 msr, u64 data)
 		/* ...but clean it before doing the actual write */
 		vcpu->arch.time_offset = data & ~(PAGE_MASK | 1);
 
+		/* Check that address+len does not cross page boundary */
+		if ((vcpu->arch.time_offset +
+			sizeof(struct pvclock_vcpu_time_info) - 1)
+			& PAGE_MASK)
+			break;
+
 		vcpu->arch.time_page =
 				gfn_to_page(vcpu->kvm, data >> PAGE_SHIFT);
 
@@ -4712,6 +4718,9 @@ int kvm_arch_vcpu_ioctl_set_sregs(struct kvm_vcpu *vcpu,
 	int mmu_reset_needed = 0;
 	int pending_vec, max_bits;
 	struct descriptor_table dt;
+
+	if (sregs->cr4 & X86_CR4_OSXSAVE)
+		return -EINVAL;
 
 	vcpu_load(vcpu);
 
